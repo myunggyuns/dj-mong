@@ -23,6 +23,12 @@ interface GameState {
   timeLeft: number;
   bestScore: number;
   lastJudgment: Judgment | null;
+  tutorialStep: number | null;
+
+  startTutorial: () => void;
+  nextTutorial: () => void;
+  prevTutorial: () => void;
+  endTutorial: () => void;
 
   setScreen: (screen: Screen) => void;
   setDifficulty: (difficulty: Difficulty) => void;
@@ -43,6 +49,38 @@ export const useGameStore = create<GameState>((set, get) => ({
   timeLeft: SESSION_SECONDS,
   bestScore: loadBestScore(),
   lastJudgment: null,
+  tutorialStep: null,
+
+  startTutorial: () => set({ screen: 'main', tutorialStep: 1 }),
+  nextTutorial: () =>
+    set((state) => {
+      const currentStep = state.tutorialStep ?? 0;
+
+      if (currentStep === 1) {
+        return { screen: 'playing', tutorialStep: 2 };
+      }
+      if (currentStep === 2) {
+        return { tutorialStep: 3 };
+      }
+
+      return { screen: 'main', tutorialStep: null };
+    }),
+  prevTutorial: () =>
+    set((state) => {
+      const currentStep = state.tutorialStep ?? 1;
+
+      // Step 2에서 이전 버튼 누르면 다시 Step 1 & 메인 화면으로 복귀
+      if (currentStep === 2) {
+        return { screen: 'main', tutorialStep: 1 };
+      }
+
+      if (currentStep === 3) {
+        return { tutorialStep: 2 };
+      }
+
+      return { screen: 'main', tutorialStep: null };
+    }),
+  endTutorial: () => set({ screen: 'main', tutorialStep: null }),
 
   setScreen: (screen) => set({ screen }),
   setDifficulty: (difficulty) => set({ difficulty }),

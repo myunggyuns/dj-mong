@@ -43,6 +43,10 @@
   color: #b89bf0;
 }
 
+.difficult-button:disabled {
+  cursor: not-allowed;
+}
+
 .difficult-explain {
   font-size: 12px;
   opacity: 0.6;
