@@ -19,7 +19,7 @@ export class MainScene extends Phaser.Scene {
   create() {
     const { width, height } = this.scale;
 
-    this.add.text(16, 16, 'NAN 2026 - Arcade', {
+    this.add.text(16, 16, 'DJ Mong', {
       fontSize: '18px',
       color: '#ffffff',
     });

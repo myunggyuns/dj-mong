@@ -1,0 +1,72 @@
+.container {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 24px;
+  color: #fff;
+  text-align: center;
+}
+
+.main-title {
+  font-size: 32px;
+  color: #fff;
+  margin: 0;
+}
+
+.best-score {
+  font-size: 14px;
+  opacity: 0.7;
+}
+
+.difficult-box {
+  display: flex;
+  gap: 8px;
+  margin-top: 24px;
+}
+
+.difficult-button {
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid #444;
+  background: #1a1a2e;
+  color: #444;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.difficult-button[data-selected='true'] {
+  border: 2px solid #b89bf0;
+  background: #2a2440;
+  color: #b89bf0;
+}
+
+.difficult-explain {
+  font-size: 12px;
+  opacity: 0.6;
+  margin-top: 8px;
+}
+
+.game-button {
+  margin-top: 24px;
+  padding: 14px 40px;
+  border-radius: 12px;
+  border: none;
+  background: #b89bf0;
+  color: #1a1a2e;
+  font-size: 16px;
+  font-weight: 700;
+  width: 140px;
+}
+
+.tutorial-button {
+  padding: 14px 40px;
+  border-radius: 12px;
+  border: 1px solid #444;
+  background: transparent;
+  color: #aaa;
+  font-size: 16px;
+  width: 140px;
+}

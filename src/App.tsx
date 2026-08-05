@@ -1,8 +1,8 @@
 import { useGameStore } from './store/gameStore';
-import MainScreen from './screens/MainScreen';
-import TutorialScreen from './screens/TutorialScreen';
-import PlayScreen from './screens/PlayScreen';
-import ResultScreen from './screens/ResultScreen';
+import MainScreen from './screens/main/MainScreen';
+import TutorialScreen from './screens/tutorial/TutorialScreen';
+import PlayScreen from './screens/play/PlayScreen';
+import ResultScreen from './screens/result/ResultScreen';
 
 function App() {
   const screen = useGameStore((s) => s.screen);

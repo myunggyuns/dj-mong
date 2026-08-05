@@ -72,7 +72,8 @@ export const useGameStore = create<GameState>((set, get) => ({
     const state = get();
     const comboBroken = judgment === 'notGood';
     const nextCombo = comboBroken ? 0 : state.combo + 1;
-    const nextPerfectStreak = judgment === 'perfect' ? state.perfectStreak + 1 : judgment === 'good' ? 0 : 0;
+    const nextPerfectStreak =
+      judgment === 'perfect' ? state.perfectStreak + 1 : judgment === 'good' ? 0 : 0;
 
     const comboMultiplier = Math.min(2.0, 1 + Math.floor(nextCombo / 10) * 0.1);
     const perfectStreakBonus = 1 + Math.min(1.0, nextPerfectStreak * 0.02); // 예시 곡선, 개발 중 튜닝
