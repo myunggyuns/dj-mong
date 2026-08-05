@@ -1,8 +1,8 @@
-import styles from './TutorialScreen.module.css';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useGameStore } from '../../store/gameStore';
 import { driver } from 'driver.js';
 import 'driver.js/dist/driver.css';
+import './TutorialScreen.module.css';
 
 const STEPS = [
   {
