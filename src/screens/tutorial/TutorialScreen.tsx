@@ -9,13 +9,13 @@ const STEPS = [
     targetElement: '#difficulty-select-area',
     title: 'Step 1. 난이도 선택',
     description:
-      ' 🎵 Normal - [ 3색, 속도x1 ] \n 🎧 Beat Master - [ 4색, 속도x1.25 ] \n 🔥 DJ Legend - [ 5색, 속도x1.5 ] \n자신에게 맞는 난이로를 선택하세요.',
+      ' 🎵 Normal - [ 3색, 속도 x 1 ] \n 🎧 Beat Master - [ 4색, 속도 x 1.25 ] \n 🔥 DJ Legend - [ 5색, 속도 x 1.4 ] \n자신에게 맞는 난이로를 선택하세요.',
   },
   {
     targetElement: '#difficulty-select-a11',
     title: 'Step 2. 타이밍 밴드',
     description:
-      '색상 텍스트가 랜덤 순서로 흘러갑니다. \n중앙 박스와 같은 색 버튼을, \n중앙에 왔을 때 누르면 퍼펙트 🤩 \n퍼펙트/굿은 콤보 유지, 낫굿만 콤보가 끊깁니다.',
+      '색상 텍스트가 랜덤 순서로 흘러갑니다. \n중앙 박스와 같은 색 버튼을, \n · 중앙에 왔을 때 누르면 퍼펙트 🤩 \n · 중앙에 오기 전에 누르면 굿 👍 \n · 중앙을 지났고 누르면 낫굿 😑 \n퍼펙트/굿은 콤보 유지, 낫굿만 콤보가 끊깁니다.',
   },
   {
     targetElement: '#difficulty-select-2',

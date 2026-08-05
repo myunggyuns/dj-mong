@@ -12,7 +12,8 @@
 
 .main-title {
   font-size: 32px;
-  color: #fff;
+  color: #b89bf0;
+  font-style: oblique 15deg;
   margin: 0;
 }
 
@@ -48,7 +49,7 @@
 }
 
 .difficult-explain {
-  font-size: 12px;
+  font-size: 14px;
   opacity: 0.6;
   margin-top: 8px;
 }
@@ -63,6 +64,7 @@
   font-size: 16px;
   font-weight: 700;
   width: 140px;
+  cursor: pointer;
 }
 
 .tutorial-button {
@@ -73,4 +75,5 @@
   color: #aaa;
   font-size: 16px;
   width: 140px;
+  cursor: pointer;
 }
