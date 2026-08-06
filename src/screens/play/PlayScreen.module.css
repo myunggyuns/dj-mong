@@ -20,6 +20,12 @@
 }
 
 .play-box {
+  position: relative;
   flex: 0 0 auto;
   height: calc(100% - 180px);
+}
+
+.tutorial-target {
+  position: absolute;
+  pointer-events: none;
 }

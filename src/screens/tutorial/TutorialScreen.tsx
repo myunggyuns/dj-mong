@@ -9,19 +9,19 @@ const STEPS = [
     targetElement: '#difficulty-select-area',
     title: 'Step 1. 난이도 선택',
     description:
-      ' 🎵 Normal - [ 3색, 속도 x 1 ] \n 🎧 Beat Master - [ 4색, 속도 x 1.25 ] \n 🔥 DJ Legend - [ 5색, 속도 x 1.4 ] \n자신에게 맞는 난이로를 선택하세요.',
+      ' 🎵 Normal - [ 3색, 속도 x 1, 버튼 레일 O ] \n 🎧 Tap Master - [ 4색, 속도 x 1.25, 버튼 레일 O ] \n 🔥Tap Legend - [ 5색, 속도 x 1.4, 버튼 레일 X ] \n자신에게 맞는 난이로를 선택하세요.',
   },
   {
-    targetElement: '#difficulty-select-a11',
+    targetElement: '#timming-band',
     title: 'Step 2. 타이밍 밴드',
     description:
       '색상 텍스트가 랜덤 순서로 흘러갑니다. \n중앙 박스와 같은 색 버튼을, \n · 중앙에 왔을 때 누르면 퍼펙트 🤩 \n · 중앙에 오기 전에 누르면 굿 👍 \n · 중앙을 지났고 누르면 낫굿 😑 \n퍼펙트/굿은 콤보 유지, 낫굿만 콤보가 끊깁니다.',
   },
   {
-    targetElement: '#difficulty-select-2',
+    targetElement: '#button-rail',
     title: 'Step 3. 버튼 찾기',
     description:
-      'DJ Mong 좌우에 색깔 버튼이 랜덤 위치로 등장합니다. \n중앙 박스와 동일한 색과 같은 버튼을 찾아 탭하세요. \n한 세트가 끝나면 버튼 위치가 다시 랜덤으로 바뀝니다.',
+      'Tap Mong 좌우에 색깔 버튼이 랜덤 위치로 등장합니다. \n중앙 박스와 동일한 색과 같은 버튼을 찾아 탭하세요. \n한 세트가 끝나면 버튼 위치가 다시 랜덤으로 바뀝니다.',
   },
 ];
 
@@ -31,7 +31,6 @@ export default function TutorialScreen() {
   // const isLast = step === STEPS.length - 1;
   const tutorialStep = useGameStore((s) => s.tutorialStep);
   const nextTutorial = useGameStore((s) => s.nextTutorial);
-  const endTutorial = useGameStore((s) => s.endTutorial);
   const prevTutorial = useGameStore((s) => s.prevTutorial);
 
   useEffect(() => {
@@ -46,6 +45,8 @@ export default function TutorialScreen() {
       animate: true,
       stagePadding: 6,
       popoverClass: 'custom-red-box-popover',
+      allowClose: false,
+      showButtons: ['next', 'previous'],
       steps: STEPS.map((v) => {
         return {
           element: v.targetElement,
@@ -65,10 +66,6 @@ export default function TutorialScreen() {
       onNextClick: () => {
         nextTutorial();
       },
-      onCloseClick: () => {
-        endTutorial();
-        driverObj.destroy();
-      },
     });
 
     driverObj.drive(stepIndex);
@@ -76,7 +73,7 @@ export default function TutorialScreen() {
     return () => {
       driverObj.destroy();
     };
-  }, [tutorialStep, nextTutorial, prevTutorial, endTutorial]);
+  }, [tutorialStep, nextTutorial, prevTutorial]);
 
   return null;
 

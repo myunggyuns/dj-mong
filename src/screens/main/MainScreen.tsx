@@ -9,7 +9,7 @@ export default function MainScreen() {
 
   return (
     <div className={styles.container}>
-      <h1 className={styles['main-title']}>DJ Mong</h1>
+      <h1 className={styles['main-title']}>Tap Mong</h1>
       <div className={styles['best-score']}>이전 기록: {bestScore.toLocaleString()}</div>
       <div id="difficulty-select-area" className={styles['difficult-box']}>
         {(Object.keys(DIFFICULTIES) as Difficulty[]).map((id) => (

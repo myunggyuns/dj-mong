@@ -4,7 +4,7 @@ import { DIFFICULTIES, type Difficulty, type ColorId } from './difficulties';
 export type Screen = 'main' | 'tutorial' | 'playing' | 'result';
 export type Judgment = 'perfect' | 'good' | 'notGood' | 'bad';
 
-const BEST_SCORE_KEY = 'djmong:bestScore';
+const BEST_SCORE_KEY = 'tapmong:bestScore';
 const BASE_POINTS: Record<Judgment, number> = { perfect: 100, good: 50, notGood: 0, bad: 0 };
 const SESSION_SECONDS = 30;
 
