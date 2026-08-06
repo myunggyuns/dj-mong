@@ -488,10 +488,16 @@ export class MainScene extends Phaser.Scene {
   }
 
   private playReactionEffect(sprite: Phaser.GameObjects.Sprite, animKey: string) {
-    this.perfectEffectSprite.setVisible(false);
-    this.goodEffectSprite.setVisible(false);
-    this.notGoodEffectSprite.setVisible(false);
-    this.badEffectSprite.setVisible(false);
+    [
+      this.perfectEffectSprite,
+      this.goodEffectSprite,
+      this.notGoodEffectSprite,
+      this.badEffectSprite,
+    ].forEach((s) => {
+      s.off(Phaser.Animations.Events.ANIMATION_COMPLETE);
+      s.stop();
+      s.setVisible(false);
+    });
     this.pendingEffectSprite.setVisible(false);
 
     sprite.setVisible(true);
