@@ -1,6 +1,6 @@
 export type Difficulty = 'normal' | 'beatMaster' | 'djLegend';
 
-export type ColorId = 'red' | 'green' | 'blue' | 'yellow' | 'black';
+export type ColorId = 'Red' | 'Green' | 'Blue' | 'Yellow' | 'Purple';
 
 export interface DifficultyConfig {
   id: Difficulty;
@@ -8,6 +8,7 @@ export interface DifficultyConfig {
   description: string;
   colors: ColorId[];
   speedMultiplier: number;
+  showLanes: boolean;
 }
 
 export const DIFFICULTIES: Record<Difficulty, DifficultyConfig> = {
@@ -15,29 +16,32 @@ export const DIFFICULTIES: Record<Difficulty, DifficultyConfig> = {
     id: 'normal',
     label: 'Normal',
     description: '3가지 색상으로 게임을 진행합니다.',
-    colors: ['red', 'green', 'blue'],
+    colors: ['Red', 'Green', 'Blue'],
     speedMultiplier: 1.0,
+    showLanes: true,
   },
   beatMaster: {
     id: 'beatMaster',
     label: 'Beat Master',
     description: '4가지 색상으로 게임을 진행합니다.',
-    colors: ['red', 'green', 'blue', 'yellow'],
+    colors: ['Red', 'Green', 'Blue', 'Yellow'],
     speedMultiplier: 1.25,
+    showLanes: true,
   },
   djLegend: {
     id: 'djLegend',
     label: 'DJ Legend',
     description: '5가지 색상으로 게임을 진행합니다.',
-    colors: ['red', 'green', 'blue', 'yellow', 'black'],
+    colors: ['Red', 'Green', 'Blue', 'Yellow', 'Purple'],
     speedMultiplier: 1.5,
+    showLanes: false,
   },
 };
 
 export const COLOR_HEX: Record<ColorId, string> = {
-  red: '#e0453f',
-  green: '#3ba55c',
-  blue: '#3d7ee0',
-  yellow: '#e0c53d',
-  black: '#2b2b33',
+  Red: '#e0453f',
+  Green: '#3ba55c',
+  Blue: '#3d7ee0',
+  Yellow: '#e0c53d',
+  Purple: '#b89bf0',
 };

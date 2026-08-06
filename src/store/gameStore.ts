@@ -1,12 +1,12 @@
 import { create } from 'zustand';
-import { DIFFICULTIES, type Difficulty } from './difficulties';
+import { DIFFICULTIES, type Difficulty, type ColorId } from './difficulties';
 
 export type Screen = 'main' | 'tutorial' | 'playing' | 'result';
-export type Judgment = 'perfect' | 'good' | 'notGood';
+export type Judgment = 'perfect' | 'good' | 'notGood' | 'bad';
 
 const BEST_SCORE_KEY = 'djmong:bestScore';
-const BASE_POINTS: Record<Judgment, number> = { perfect: 100, good: 50, notGood: 0 };
-const SESSION_SECONDS = 60;
+const BASE_POINTS: Record<Judgment, number> = { perfect: 100, good: 50, notGood: 0, bad: 0 };
+const SESSION_SECONDS = 30;
 
 function loadBestScore(): number {
   const raw = localStorage.getItem(BEST_SCORE_KEY);
@@ -23,7 +23,9 @@ interface GameState {
   timeLeft: number;
   bestScore: number;
   lastJudgment: Judgment | null;
+  judgmentSeq: number;
   tutorialStep: number | null;
+  currentTargetColor: ColorId | null;
 
   startTutorial: () => void;
   nextTutorial: () => void;
@@ -32,6 +34,7 @@ interface GameState {
 
   setScreen: (screen: Screen) => void;
   setDifficulty: (difficulty: Difficulty) => void;
+  setCurrentTarget: (color: ColorId) => void;
   startGame: () => void;
   tick: (deltaSeconds: number) => void;
   registerJudgment: (judgment: Judgment) => void;
@@ -49,7 +52,9 @@ export const useGameStore = create<GameState>((set, get) => ({
   timeLeft: SESSION_SECONDS,
   bestScore: loadBestScore(),
   lastJudgment: null,
+  judgmentSeq: 0,
   tutorialStep: null,
+  currentTargetColor: null,
 
   startTutorial: () => set({ screen: 'main', tutorialStep: 1 }),
   nextTutorial: () =>
@@ -84,6 +89,9 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   setScreen: (screen) => set({ screen }),
   setDifficulty: (difficulty) => set({ difficulty }),
+  setCurrentTarget: (color) => {
+    if (get().currentTargetColor !== color) set({ currentTargetColor: color });
+  },
 
   startGame: () =>
     set({
@@ -103,12 +111,12 @@ export const useGameStore = create<GameState>((set, get) => ({
   },
 
   // 판정 규칙 (기획 확정):
-  // - 퍼펙트/굿 둘 다 콤보 유지, 낫굿만 콤보 초기화
+  // - 퍼펙트/굿 둘 다 콤보 유지, 낫굿·배드는 콤보 초기화
   // - 퍼펙트 연속 스트릭은 콤보와 별개 카운터 (굿이 섞이면 스트릭만 리셋, 콤보는 유지)
   // - 콤보 배율: 10마다 +0.1, 상한 x2.0
   registerJudgment: (judgment) => {
     const state = get();
-    const comboBroken = judgment === 'notGood';
+    const comboBroken = judgment === 'notGood' || judgment === 'bad';
     const nextCombo = comboBroken ? 0 : state.combo + 1;
     const nextPerfectStreak =
       judgment === 'perfect' ? state.perfectStreak + 1 : judgment === 'good' ? 0 : 0;
@@ -124,6 +132,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       maxCombo: Math.max(state.maxCombo, nextCombo),
       perfectStreak: nextPerfectStreak,
       lastJudgment: judgment,
+      judgmentSeq: state.judgmentSeq + 1,
     });
   },
 

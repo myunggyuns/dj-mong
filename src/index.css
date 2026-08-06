@@ -6,7 +6,9 @@
   box-sizing: border-box;
 }
 
-html, body, #root {
+html,
+body,
+#root {
   margin: 0;
   padding: 0;
   height: 100%;
@@ -31,9 +33,9 @@ body {
 */
 .mobile-frame {
   width: 100%;
-  max-width: 480px;
+  max-width: 430px;
+  min-width: 370px;
   height: 100dvh;
-  max-height: 853px;
   aspect-ratio: 9 / 16;
   position: relative;
   overflow: hidden;
