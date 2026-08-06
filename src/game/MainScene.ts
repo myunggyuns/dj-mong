@@ -1,9 +1,9 @@
 import Phaser from 'phaser';
-import djmongPerfectReaction from '../assets/djmong-perfect.png';
-import djmongGoodReaction from '../assets/djmong-good.png';
-import djmongNotGoodReaction from '../assets/djmong-notgood.png';
-import djmongBadReaction from '../assets/djmong-bad.png';
-import djmongPendingReaction from '../assets/djmong-pending.png';
+import tapMongPerfectReaction from '../assets/tap-mong-perfect.png';
+import tapMongGoodReaction from '../assets/tap-mong-good.png';
+import tapMongNotGoodReaction from '../assets/tap-mong-notgood.png';
+import tapMongBadReaction from '../assets/tap-mong-bad.png';
+import tapMongPendingReaction from '../assets/tap-mong-pending.png';
 import { useGameStore, type Judgment } from '../store/gameStore';
 import { DIFFICULTIES, COLOR_HEX, type ColorId } from '../store/difficulties';
 import {
@@ -38,6 +38,17 @@ const JUDGE_GOOD_MS = 280;
 
 const FOOTER_HEIGHT = 56;
 
+// Phaser draws these regions onto its internal <canvas>, so they have no DOM
+// node for the tutorial (driver.js) to target. PlayScreen renders invisible
+// overlay divs positioned with this same geometry so driver.js has something
+// to highlight.
+export const TUTORIAL_BAND_TARGET_LAYOUT = { top: 45, height: 60 };
+export const TUTORIAL_BUTTON_TARGET_LAYOUT = {
+  top: BAND_HEIGHT + BUTTON_RADIUS + BUTTON_VERTICAL_TOP_MARGIN - 20,
+  bottomOffset: BUTTON_RADIUS + BUTTON_VERTICAL_BOTTOM_MARGIN - 10,
+  sideMargin: BUTTON_LANE_EDGE_MARGIN + BUTTON_RADIUS - 20,
+};
+
 const JUDGMENT_LABEL: Record<Judgment, string> = {
   perfect: 'Perfect!',
   good: 'Good',
@@ -58,6 +69,7 @@ export class MainScene extends Phaser.Scene {
   private bandQueue: ColorId[] = [];
   private bandLastSpawnMs = 0;
   private bandStartMs = 0;
+  private tutorialDemoWordSpawned = false;
 
   private buttonShapes: Phaser.GameObjects.Arc[] = [];
   private laneShapes: Phaser.GameObjects.Graphics[] = [];
@@ -79,27 +91,27 @@ export class MainScene extends Phaser.Scene {
 
   preload() {
     // TODO: 실제 아트로 교체. 지금은 기본 스프라이트로 프로토타이핑.
-    this.load.spritesheet('perfect_effect', djmongPerfectReaction, {
+    this.load.spritesheet('perfect_effect', tapMongPerfectReaction, {
       frameWidth: 100,
       frameHeight: 100,
     });
 
-    this.load.spritesheet('good_effect', djmongGoodReaction, {
+    this.load.spritesheet('good_effect', tapMongGoodReaction, {
       frameWidth: 100,
       frameHeight: 100,
     });
 
-    this.load.spritesheet('not_good_effect', djmongNotGoodReaction, {
+    this.load.spritesheet('not_good_effect', tapMongNotGoodReaction, {
       frameWidth: 100,
       frameHeight: 100,
     });
 
-    this.load.spritesheet('bad_effect', djmongBadReaction, {
+    this.load.spritesheet('bad_effect', tapMongBadReaction, {
       frameWidth: 100,
       frameHeight: 100,
     });
 
-    this.load.spritesheet('pending_effect', djmongPendingReaction, {
+    this.load.spritesheet('pending_effect', tapMongPendingReaction, {
       frameWidth: 100,
       frameHeight: 100,
     });
@@ -188,7 +200,17 @@ export class MainScene extends Phaser.Scene {
   }
 
   update() {
-    this.updateColorBand(performance.now());
+    const tutorialStep = useGameStore.getState().tutorialStep;
+
+    // Step 2 demos the band with a single word instead of the live, endless
+    // stream, so the player can read the popover without the band racing on.
+    if (tutorialStep === 2) {
+      this.updateColorBand(performance.now(), true);
+      return;
+    }
+    if (tutorialStep !== null) return;
+
+    this.updateColorBand(performance.now(), false);
   }
 
   private createColorBand() {
@@ -201,8 +223,8 @@ export class MainScene extends Phaser.Scene {
     this.bandStartMs = performance.now();
     this.bandLastSpawnMs = 0;
 
-    const yPosition = 75;
-    const railHeight = 60;
+    const yPosition = TUTORIAL_BAND_TARGET_LAYOUT.top + TUTORIAL_BAND_TARGET_LAYOUT.height / 2;
+    const railHeight = TUTORIAL_BAND_TARGET_LAYOUT.height;
     this.add.rectangle(width / 2, yPosition, width, railHeight, 0x333333);
 
     const zone = this.add.graphics();
@@ -214,7 +236,7 @@ export class MainScene extends Phaser.Scene {
     zone.strokeRoundedRect(zoneX, 51, BAND_ZONE_WIDTH, BAND_HEIGHT - 8, 10);
   }
 
-  private updateColorBand(now: number) {
+  private updateColorBand(now: number, singleDemoWord: boolean) {
     const { width } = this.scale;
     const difficulty = useGameStore.getState().difficulty;
     const config = DIFFICULTIES[difficulty];
@@ -226,11 +248,14 @@ export class MainScene extends Phaser.Scene {
     const travel =
       lerp(BAND_BASE_TRAVEL_MS, BAND_MIN_TRAVEL_MS, elapsedRatio) / config.speedMultiplier;
 
-    if (elapsed - this.bandLastSpawnMs >= interval) {
+    const canSpawn = !singleDemoWord || !this.tutorialDemoWordSpawned;
+
+    if (canSpawn && elapsed - this.bandLastSpawnMs >= interval) {
       this.bandLastSpawnMs = elapsed;
+      if (singleDemoWord) this.tutorialDemoWordSpawned = true;
       if (this.bandQueue.length === 0) {
         this.bandQueue = shuffledSet(config.colors);
-        this.spawnButtons();
+        if (!singleDemoWord) this.spawnButtons();
       }
       const color = this.bandQueue.shift()!;
       const word = createWord(color, now, travel);
@@ -478,6 +503,8 @@ export class MainScene extends Phaser.Scene {
   }
 
   private handleButtonTap(color: ColorId) {
+    if (useGameStore.getState().tutorialStep !== null) return;
+
     const currentTargetColor = useGameStore.getState().currentTargetColor;
 
     if (color !== currentTargetColor) {

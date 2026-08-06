@@ -52,6 +52,8 @@
   font-size: 14px;
   opacity: 0.6;
   margin-top: 8px;
+  white-space: pre;
+  line-height: 1.4;
 }
 
 .game-button {

@@ -7,7 +7,7 @@ export default function ResultScreen() {
 
   return (
     <div className={styles.container}>
-      {/* TODO: DJMong 반응 멘트(판정 요약 기반 LLM 코멘트) 여기 표시 */}
+      {/* TODO: Tap Mong 반응 멘트(판정 요약 기반 LLM 코멘트) 여기 표시 */}
       {isNewBest && <div className={styles['result-best-score']}>🎉 신기록 갱신!</div>}
       <h2 className={styles['result-title']}>{score.toLocaleString()}</h2>
       <div className={styles['result-combo-title']}>최고 콤보 x{maxCombo}</div>
