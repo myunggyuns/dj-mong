@@ -17,17 +17,19 @@ export default function PlayScreen() {
     pauseGame,
     resumeGame,
     resetSession,
+    hasStarted,
+    beginSession,
   } = useGameStore();
   const [isShaking, setIsShaking] = useState(false);
 
   useEffect(() => {
-    if (tutorialStep !== null) return;
+    if (tutorialStep !== null || !hasStarted) return;
     const interval = setInterval(() => {
       if (useGameStore.getState().isPaused) return;
       tick(0.1);
     }, 100);
     return () => clearInterval(interval);
-  }, [tick, tutorialStep]);
+  }, [tick, tutorialStep, hasStarted]);
 
   useEffect(() => {
     if (judgmentSeq === 0 || !lastJudgment || !SHAKE_JUDGMENTS.has(lastJudgment)) return;
@@ -59,6 +61,28 @@ export default function PlayScreen() {
 
       <div className={`${styles['play-box']} ${isShaking ? styles.shake : ''}`}>
         <GameCanvas />
+
+        {tutorialStep === null && !hasStarted && (
+          <div className={styles['start-overlay']}>
+            <div className={styles['start-modal']}>
+              <p className={styles['start-notice']}>게임을 시작하려면 시작하기를 눌러주세요</p>
+              <button
+                type="button"
+                className={styles['start-button']}
+                onClick={() => beginSession()}
+              >
+                시작하기
+              </button>
+              <button
+                type="button"
+                className={styles['start-back-button']}
+                onClick={() => resetSession()}
+              >
+                뒤로가기
+              </button>
+            </div>
+          </div>
+        )}
 
         {isPaused && (
           <div className={styles['pause-overlay']}>

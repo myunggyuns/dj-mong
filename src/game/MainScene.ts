@@ -5,11 +5,11 @@ import tapMongNotGoodReaction from '../assets/tap-mong-notgood.png';
 import tapMongBadReaction from '../assets/tap-mong-bad.png';
 import tapMongPendingReaction from '../assets/tap-mong-pending.png';
 import tapMongBG from '../assets/tap-mong-bg.png';
-import perfectSound from '../assets/effects/perfect.mp3';
-import goodSound from '../assets/effects/good.mp3';
-import notGoodSound from '../assets/effects/not_good.mp3';
-import badSound from '../assets/effects/bad.mp3';
-import backgroundSound from '../assets/effects/background.mp3';
+import perfectSound from '../assets/effects/perfect.mp4';
+import goodSound from '../assets/effects/good.mp4';
+import notGoodSound from '../assets/effects/not_good.mp4';
+import badSound from '../assets/effects/bad.mp4';
+import backgroundSound from '../assets/effects/background.mp4';
 
 import { useGameStore, type Judgment } from '../store/gameStore';
 import {
@@ -66,13 +66,18 @@ export class MainScene extends Phaser.Scene {
   private judgedWordIds = new Set<number>();
 
   private buttonShapes: Phaser.GameObjects.Image[] = [];
-  private laneShapes: Phaser.GameObjects.Graphics[] = [];
 
   private hudScoreText!: Phaser.GameObjects.Text;
   private hudComboText!: Phaser.GameObjects.Text;
   private hudJudgmentText!: Phaser.GameObjects.Text;
   private unsubscribeStore: (() => void) | null = null;
   private unsubscribePause: (() => void) | null = null;
+  private unsubscribeGameStart: (() => void) | null = null;
+
+  // iOS Safari는 <audio>/Web Audio로 낸 소리는 무음 스위치를 따라 꺼버리지만,
+  // <video>의 오디오 트랙은 예외적으로 무음 스위치를 무시하고 재생된다. 그래서
+  // Phaser의 사운드 매니저 대신 숨겨진 video 엘리먼트로 직접 재생한다.
+  private soundVideos = new Map<string, HTMLVideoElement>();
 
   // 일시정지 동안 흐른 실제 시간을 빼서 밴드 로직이 쓰는 시계가
   // 정지 구간만큼 멈춰 있던 것처럼 보이게 만든다.
@@ -117,11 +122,43 @@ export class MainScene extends Phaser.Scene {
     });
 
     this.load.image('background', tapMongBG);
-    this.load.audio('perfect_sound', perfectSound);
-    this.load.audio('good_sound', goodSound);
-    this.load.audio('not_good_sound', notGoodSound);
-    this.load.audio('bad_sound', badSound);
-    this.load.audio('background_sound', backgroundSound);
+
+    this.load.on(Phaser.Loader.Events.FILE_LOAD_ERROR, (file: Phaser.Loader.File) => {
+      console.error('[MainScene] failed to load asset', file.key, file.src);
+    });
+  }
+
+  private createSoundVideos() {
+    const sources: Record<string, string> = {
+      background_sound: backgroundSound,
+      perfect_sound: perfectSound,
+      good_sound: goodSound,
+      not_good_sound: notGoodSound,
+      bad_sound: badSound,
+    };
+
+    Object.entries(sources).forEach(([key, src]) => {
+      const video = document.createElement('video');
+      video.src = src;
+      video.preload = 'auto';
+      video.playsInline = true;
+      video.loop = key === 'background_sound';
+      video.volume = key === 'background_sound' ? 0.3 : 1;
+      video.style.position = 'fixed';
+      video.style.width = '1px';
+      video.style.height = '1px';
+      video.style.opacity = '0';
+      video.style.pointerEvents = 'none';
+      document.body.appendChild(video);
+      this.soundVideos.set(key, video);
+    });
+  }
+
+  private playTrack(key: string) {
+    const video = this.soundVideos.get(key);
+    if (!video) return;
+    video.currentTime = 0;
+    video.play().catch(() => {});
   }
 
   create() {
@@ -143,17 +180,6 @@ export class MainScene extends Phaser.Scene {
 
     const bg = this.add.image(width / 2, height / 2, 'background');
     bg.setDisplaySize(width, height);
-
-    const playBackgroundSound = () =>
-      this.sound.play('background_sound', { loop: true, volume: 0.3 });
-
-    if (this.sound.locked) {
-      // 모바일 크롬 등은 오토플레이 정책상 사용자 제스처가 있기 전까지
-      // AudioContext가 잠겨 있어 이 시점의 play() 호출이 무시된다.
-      this.sound.once(Phaser.Sound.Events.UNLOCKED, playBackgroundSound);
-    } else {
-      playBackgroundSound();
-    }
 
     this.anims.create({
       key: 'perfect_anim',
@@ -229,16 +255,37 @@ export class MainScene extends Phaser.Scene {
     // this.drawButtonLanes();
     this.spawnButtons();
     this.createHud();
+    this.createSoundVideos();
     this.watchPauseState();
+    this.watchGameStart();
 
-    this.events.once('shutdown', () => {
+    const cleanup = () => {
       this.unsubscribeStore?.();
       this.unsubscribePause?.();
+      this.unsubscribeGameStart?.();
+      this.soundVideos.forEach((video) => video.remove());
+      this.soundVideos.clear();
+    };
+    this.events.once('shutdown', cleanup);
+    this.events.once('destroy', cleanup);
+  }
+
+  // PlayScreen의 "시작하기" 모달을 탭하는 순간(=진짜 유저 제스처 콜스택 안) 이 콜백이
+  // 동기적으로 실행된다. 그 자리에서 바로 BGM을 재생해야 iOS Safari 등에서 오토플레이
+  // 정책에 안 걸리고 확실하게 소리가 난다.
+  private watchGameStart() {
+    if (useGameStore.getState().hasStarted) this.beginSession();
+
+    this.unsubscribeGameStart = useGameStore.subscribe((next, prev) => {
+      if (next.hasStarted === prev.hasStarted || !next.hasStarted) return;
+      this.beginSession();
     });
-    this.events.once('destroy', () => {
-      this.unsubscribeStore?.();
-      this.unsubscribePause?.();
-    });
+  }
+
+  private beginSession() {
+    this.bandStartMs = performance.now();
+    this.bandLastSpawnMs = 0;
+    this.playTrack('background_sound');
   }
 
   private watchPauseState() {
@@ -271,10 +318,10 @@ export class MainScene extends Phaser.Scene {
     // stream, so the player can read the popover without the band racing on.
     if (tutorialStep === 2) {
       this.updateColorBand(this.getLogicalNow(), true);
-      this.sound.pauseAll();
       return;
     }
     if (tutorialStep !== null) return;
+    if (!useGameStore.getState().hasStarted) return;
 
     this.updateColorBand(this.getLogicalNow(), false);
   }
@@ -636,7 +683,7 @@ export class MainScene extends Phaser.Scene {
 
     sprite.setVisible(true);
     sprite.play(animKey);
-    this.sound.play(soundKey);
+    this.playTrack(soundKey);
     sprite.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
       sprite.setVisible(false);
       this.pendingEffectSprite.setVisible(true);
@@ -646,6 +693,7 @@ export class MainScene extends Phaser.Scene {
   private handleButtonTap(color: ColorId) {
     if (useGameStore.getState().tutorialStep !== null) return;
     if (useGameStore.getState().isPaused) return;
+    if (!useGameStore.getState().hasStarted) return;
 
     const currentTargetColor = useGameStore.getState().currentTargetColor;
 
@@ -721,11 +769,12 @@ export function createGameConfig(parent: HTMLDivElement): Phaser.Types.Core.Game
     parent,
     width: '100%',
     height: '100%',
+    // audio: { disableWebAudio: true },
     physics: {
       default: 'arcade',
       arcade: {
         gravity: { x: 0, y: 0 },
-        debug: false,
+        debug: true,
       },
     },
     scene: MainScene,
