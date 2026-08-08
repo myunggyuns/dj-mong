@@ -4,12 +4,13 @@ import tapMongGoodReaction from '../assets/tap-mong-good.png';
 import tapMongNotGoodReaction from '../assets/tap-mong-notgood.png';
 import tapMongBadReaction from '../assets/tap-mong-bad.png';
 import tapMongPendingReaction from '../assets/tap-mong-pending.png';
+
 import tapMongBG from '../assets/tap-mong-bg.png';
 import perfectSound from '../assets/effects/perfect.mp4';
 import goodSound from '../assets/effects/good.mp4';
 import notGoodSound from '../assets/effects/not_good.mp4';
 import badSound from '../assets/effects/bad.mp4';
-import backgroundSound from '../assets/effects/background.mp4';
+import backgroundSound from '../assets/effects/tap_mong_bgm.mp4';
 
 import { useGameStore, type Judgment } from '../store/gameStore';
 import {
