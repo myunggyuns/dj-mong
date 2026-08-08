@@ -26,7 +26,7 @@ import {
   lerp,
   createWord,
   progressOf,
-  msUntilCenter,
+  centerOverlapRatio,
   withAlpha,
   shadeColor,
   type BandWord,
@@ -51,8 +51,9 @@ import {
   BUTTON_VERTICAL_BOTTOM_MARGIN,
   BUTTON_PLACEMENT_MAX_ATTEMPTS,
   TAP_MONG_RATIO,
-  JUDGE_PERFECT_MS,
-  JUDGE_GOOD_MS,
+  JUDGE_PERFECT_OVERLAP_RATIO,
+  JUDGE_GOOD_OVERLAP_RATIO,
+  JUDGE_NOT_GOOD_OVERLAP_RATIO,
   FOOTER_HEIGHT,
   TUTORIAL_BAND_TARGET_LAYOUT,
 } from '../constant/game';
@@ -710,18 +711,25 @@ export class MainScene extends Phaser.Scene {
     if (!target) return;
     this.judgedWordIds.add(target.id);
 
-    const absMs = Math.abs(msUntilCenter(target, now));
+    const bandInnerWidth = this.scale.width - BAND_MARGIN_X * 2;
+    const targetText = this.bandTexts.get(target.id);
+    const overlapRatio = targetText
+      ? centerOverlapRatio(target, now, bandInnerWidth, this.scale.width, targetText.width)
+      : 0;
 
     let judgment: Judgment;
-    if (absMs <= JUDGE_PERFECT_MS) {
+    if (overlapRatio >= JUDGE_PERFECT_OVERLAP_RATIO) {
       judgment = 'perfect';
       this.playReactionEffect(this.perfectEffectSprite, 'perfect_anim', 'perfect_sound');
-    } else if (absMs <= JUDGE_GOOD_MS) {
+    } else if (overlapRatio >= JUDGE_GOOD_OVERLAP_RATIO) {
       judgment = 'good';
       this.playReactionEffect(this.goodEffectSprite, 'good_anim', 'good_sound');
-    } else {
+    } else if (overlapRatio >= JUDGE_NOT_GOOD_OVERLAP_RATIO) {
       judgment = 'notGood';
       this.playReactionEffect(this.notGoodEffectSprite, 'not_good_anim', 'not_good_sound');
+    } else {
+      judgment = 'bad';
+      this.playReactionEffect(this.badEffectSprite, 'bad_anim', 'bad_sound');
     }
     if (target) {
       this.bandTexts.get(target.id)?.destroy();

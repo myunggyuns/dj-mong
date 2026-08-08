@@ -1,4 +1,5 @@
 import type { ColorId } from '../store/difficulties';
+import { BAND_MARGIN_X, BAND_ZONE_WIDTH } from '../constant/game';
 
 interface BandWord {
   id: number;
@@ -39,6 +40,37 @@ function msUntilCenter(word: BandWord, now: number): number {
   return centerAt - now;
 }
 
+/**
+ * 현재 단어(텍스트)가 화면에 그려지는 밴드 중앙 박스(BAND_ZONE_WIDTH) 안에
+ * 단어 너비 대비 얼마나 겹쳐 있는지(0~1)를 반환한다.
+ * MainScene의 x = BAND_MARGIN_X + (1.15 - 1.3 * progress) * bandInnerWidth 매핑, scale 보간과
+ * 동일한 계수를 사용해야 화면에 보이는 위치/크기와 판정 기준이 어긋나지 않는다.
+ */
+function centerOverlapRatio(
+  word: BandWord,
+  now: number,
+  bandInnerWidth: number,
+  screenWidth: number,
+  textWidth: number,
+): number {
+  if (textWidth <= 0) return 0;
+
+  const progress = progressOf(word, now);
+  const distFromCenter = Math.abs(progress - 0.5);
+  const scale = lerp(1.7, 0.7, Math.min(1, distFromCenter / 0.5));
+  const xPercent = 1.15 - progress * 1.3;
+  const centerX = BAND_MARGIN_X + xPercent * bandInnerWidth;
+
+  const wordWidth = textWidth * scale;
+  const wordLeft = centerX - wordWidth / 2;
+  const wordRight = centerX + wordWidth / 2;
+  const boxLeft = screenWidth / 2 - BAND_ZONE_WIDTH / 2;
+  const boxRight = screenWidth / 2 + BAND_ZONE_WIDTH / 2;
+
+  const overlap = Math.max(0, Math.min(wordRight, boxRight) - Math.max(wordLeft, boxLeft));
+  return overlap / wordWidth;
+}
+
 function hexToRgb(hex: string) {
   const n = parseInt(hex.slice(1), 16);
   return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
@@ -61,6 +93,7 @@ export {
   withAlpha,
   shadeColor,
   msUntilCenter,
+  centerOverlapRatio,
   progressOf,
   createWord,
   lerp,
