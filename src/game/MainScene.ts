@@ -24,14 +24,18 @@ const BAND_HEIGHT = 56;
 const BAND_MARGIN_X = 12;
 const BAND_ZONE_WIDTH = 100;
 
-const BUTTON_SIZE = 30;
+const BUTTON_SIZE = 45;
 const BUTTON_RADIUS = BUTTON_SIZE / 2;
+const BUTTON_GLOW_PADDING = 12;
+const BUTTON_PRESS_SCALE = 0.88;
 const BUTTON_MIN_DISTANCE = 50;
 const BUTTON_LANE_EDGE_MARGIN = 16;
 const BUTTON_CHARACTER_EXCLUSION_HALF_WIDTH = 110;
 const BUTTON_VERTICAL_TOP_MARGIN = 100;
 const BUTTON_VERTICAL_BOTTOM_MARGIN = 200;
 const BUTTON_PLACEMENT_MAX_ATTEMPTS = 200;
+
+const TAP_MONG_RATIO = 1.8;
 
 const JUDGE_PERFECT_MS = 120;
 const JUDGE_GOOD_MS = 280;
@@ -63,6 +67,24 @@ const JUDGMENT_COLOR: Record<Judgment, string> = {
   bad: '#e0453f',
 };
 
+function hexToRgb(hex: string) {
+  const n = parseInt(hex.slice(1), 16);
+  return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+}
+
+// color-mix(hex, white/black percent)에 대응하는 캔버스용 셰이딩 헬퍼.
+function shadeColor(hex: string, percent: number) {
+  const { r, g, b } = hexToRgb(hex);
+  const amt = Math.round(2.55 * percent);
+  const clamp = (v: number) => Math.min(255, Math.max(0, v));
+  return `rgb(${clamp(r + amt)}, ${clamp(g + amt)}, ${clamp(b + amt)})`;
+}
+
+function withAlpha(hex: string, alpha: number) {
+  const { r, g, b } = hexToRgb(hex);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
 export class MainScene extends Phaser.Scene {
   private bandWords: BandWord[] = [];
   private bandTexts = new Map<number, Phaser.GameObjects.Text>();
@@ -71,7 +93,7 @@ export class MainScene extends Phaser.Scene {
   private bandStartMs = 0;
   private tutorialDemoWordSpawned = false;
 
-  private buttonShapes: Phaser.GameObjects.Arc[] = [];
+  private buttonShapes: Phaser.GameObjects.Image[] = [];
   private laneShapes: Phaser.GameObjects.Graphics[] = [];
 
   private hudScoreText!: Phaser.GameObjects.Text;
@@ -171,23 +193,23 @@ export class MainScene extends Phaser.Scene {
     });
 
     this.perfectEffectSprite = this.add.sprite(width / 2, height / 2, 'perfect_effect', 0);
-    this.perfectEffectSprite.setScale(2.15);
+    this.perfectEffectSprite.setScale(TAP_MONG_RATIO + 0.15);
     this.perfectEffectSprite.setVisible(false);
 
     this.goodEffectSprite = this.add.sprite(width / 2, height / 2, 'good_effect', 0);
-    this.goodEffectSprite.setScale(2);
+    this.goodEffectSprite.setScale(TAP_MONG_RATIO);
     this.goodEffectSprite.setVisible(false);
 
     this.notGoodEffectSprite = this.add.sprite(width / 2, height / 2, 'not_good_effect', 0);
-    this.notGoodEffectSprite.setScale(2);
+    this.notGoodEffectSprite.setScale(TAP_MONG_RATIO);
     this.notGoodEffectSprite.setVisible(false);
 
     this.badEffectSprite = this.add.sprite(width / 2, height / 2, 'bad_effect', 0);
-    this.badEffectSprite.setScale(2);
+    this.badEffectSprite.setScale(TAP_MONG_RATIO);
     this.badEffectSprite.setVisible(false);
 
     this.pendingEffectSprite = this.add.sprite(width / 2, height / 2, 'pending_effect', 0);
-    this.pendingEffectSprite.setScale(2);
+    this.pendingEffectSprite.setScale(TAP_MONG_RATIO);
     this.pendingEffectSprite.play('pending_anim');
 
     this.createColorBand();
@@ -356,6 +378,74 @@ export class MainScene extends Phaser.Scene {
     });
   }
 
+  // 색상별 캔버스 텍스처를 한 번만 생성해 캐싱한다: radial-gradient 하이라이트/그림자,
+  // 바깥쪽 glow, 안쪽 위-밝음/아래-어두움 립(inset shadow처럼 보이게)까지 직접 그린다.
+  private ensureButtonTexture(color: ColorId): string {
+    const key = `btn-${color}`;
+    if (this.textures.exists(key)) return key;
+
+    const hex = COLOR_HEX[color];
+    const size = (BUTTON_RADIUS + BUTTON_GLOW_PADDING) * 2;
+    const center = size / 2;
+
+    const canvasTexture = this.textures.createCanvas(key, size, size);
+    if (!canvasTexture) return key;
+    const ctx = canvasTexture.context;
+
+    ctx.save();
+    ctx.shadowColor = withAlpha(hex, 0.85);
+    ctx.shadowBlur = BUTTON_GLOW_PADDING;
+    ctx.beginPath();
+    ctx.arc(center, center, BUTTON_RADIUS, 0, Math.PI * 2);
+    ctx.fillStyle = hex;
+    ctx.fill();
+    ctx.restore();
+
+    const gradient = ctx.createRadialGradient(
+      center - BUTTON_RADIUS * 0.35,
+      center - BUTTON_RADIUS * 0.4,
+      BUTTON_RADIUS * 0.1,
+      center,
+      center,
+      BUTTON_RADIUS * 1.05,
+    );
+    gradient.addColorStop(0, shadeColor(hex, 45));
+    gradient.addColorStop(0.55, hex);
+    gradient.addColorStop(1, shadeColor(hex, -35));
+
+    ctx.beginPath();
+    ctx.arc(center, center, BUTTON_RADIUS, 0, Math.PI * 2);
+    ctx.fillStyle = gradient;
+    ctx.fill();
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(center, center, BUTTON_RADIUS, 0, Math.PI * 2);
+    ctx.clip();
+
+    const topShine = ctx.createLinearGradient(0, center - BUTTON_RADIUS, 0, center);
+    topShine.addColorStop(0, 'rgba(255, 255, 255, 0.45)');
+    topShine.addColorStop(1, 'rgba(255, 255, 255, 0)');
+    ctx.fillStyle = topShine;
+    ctx.fillRect(0, center - BUTTON_RADIUS, size, BUTTON_RADIUS);
+
+    const bottomShade = ctx.createLinearGradient(0, center, 0, center + BUTTON_RADIUS);
+    bottomShade.addColorStop(0, 'rgba(0, 0, 0, 0)');
+    bottomShade.addColorStop(1, 'rgba(0, 0, 0, 0.4)');
+    ctx.fillStyle = bottomShade;
+    ctx.fillRect(0, center, size, BUTTON_RADIUS);
+
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.35)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(center, center, BUTTON_RADIUS - 1, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+
+    canvasTexture.refresh();
+    return key;
+  }
+
   private spawnButtons() {
     const difficulty = useGameStore.getState().difficulty;
     const config = DIFFICULTIES[difficulty];
@@ -390,15 +480,38 @@ export class MainScene extends Phaser.Scene {
       if (!point) return;
 
       placed.push(point);
-      const circle = this.add.circle(
-        point.x,
-        point.y,
-        BUTTON_RADIUS,
-        parseInt(COLOR_HEX[color].slice(1), 16),
-      );
-      circle.setInteractive({ useHandCursor: true });
-      circle.on('pointerdown', () => this.handleButtonTap(color));
-      this.buttonShapes.push(circle);
+      const textureKey = this.ensureButtonTexture(color);
+      const button = this.add.image(point.x, point.y, textureKey);
+      button.setInteractive({
+        hitArea: new Phaser.Geom.Circle(button.width / 2, button.height / 2, BUTTON_RADIUS),
+        hitAreaCallback: Phaser.Geom.Circle.Contains,
+        useHandCursor: true,
+      });
+
+      const settle = () => {
+        this.tweens.killTweensOf(button);
+        this.tweens.add({
+          targets: button,
+          scale: 1,
+          duration: 120,
+          ease: 'Back.easeOut',
+        });
+      };
+
+      button.on('pointerdown', () => {
+        this.tweens.killTweensOf(button);
+        this.tweens.add({
+          targets: button,
+          scale: BUTTON_PRESS_SCALE,
+          duration: 80,
+          ease: 'Quad.easeOut',
+        });
+        this.handleButtonTap(color);
+      });
+      button.on('pointerup', settle);
+      button.on('pointerout', settle);
+
+      this.buttonShapes.push(button);
     });
   }
 
@@ -410,7 +523,12 @@ export class MainScene extends Phaser.Scene {
       width / 2,
       BAND_HEIGHT / 2,
       `Score ${state.score.toLocaleString()}`,
-      { fontSize: '20px', fontStyle: 'bold', color: '#ffffff' },
+      {
+        fontFamily: '"Chakra Petch", sans-serif',
+        fontSize: '20px',
+        fontStyle: 'bold',
+        color: '#ffffff',
+      },
     );
 
     this.hudScoreText.setOrigin(0.5);
@@ -456,13 +574,14 @@ export class MainScene extends Phaser.Scene {
   private playScorePop() {
     this.tweens.killTweensOf(this.hudScoreText);
     this.hudScoreText.setScale(1);
-    this.hudScoreText.setColor('#ffe066');
+    this.hudScoreText.setColor('#ffd166');
     this.tweens.add({
       targets: this.hudScoreText,
-      scale: { from: 1.35, to: 1 },
-      duration: 350,
-      ease: 'Back.easeOut',
-      onComplete: () => this.hudScoreText.setColor('#ffffff'),
+      scale: { from: 1, to: 1.25 },
+      duration: 150,
+      ease: 'Cubic.easeOut',
+      yoyo: true,
+      onYoyo: () => this.hudScoreText.setColor('#ffffff'),
     });
   }
 
