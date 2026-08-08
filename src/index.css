@@ -61,7 +61,7 @@ body {
 .mobile-frame {
   width: 100%;
   max-width: 430px;
-  min-width: 370px;
+  min-width: 340px;
   height: 100dvh;
   aspect-ratio: 9 / 16;
   position: relative;
