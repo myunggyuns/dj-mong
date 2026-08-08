@@ -10,12 +10,16 @@ function App() {
 
   return (
     <div className="mobile-frame">
-      {screen === 'main' && <MainScreen />}
-      {/* {screen === 'tutorial' && <TutorialScreen />} */}
-      {screen === 'playing' && <PlayScreen />}
-      {screen === 'result' && <ResultScreen />}
+      <div className="screen-area">
+        {screen === 'main' && <MainScreen />}
+        {/* {screen === 'tutorial' && <TutorialScreen />} */}
+        {screen === 'playing' && <PlayScreen />}
+        {screen === 'result' && <ResultScreen />}
 
-      {tutorialStep !== null && <TutorialScreen />}
+        {tutorialStep !== null && <TutorialScreen />}
+      </div>
+
+      <div className="ad-slot">_</div>
     </div>
   );
 }
