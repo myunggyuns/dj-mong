@@ -5,6 +5,11 @@ import tapMongNotGoodReaction from '../assets/tap-mong-notgood.png';
 import tapMongBadReaction from '../assets/tap-mong-bad.png';
 import tapMongPendingReaction from '../assets/tap-mong-pending.png';
 import tapMongBG from '../assets/tap-mong-bg.png';
+import perfectSound from '../assets/effects/perfect.mp3';
+import goodSound from '../assets/effects/good.mp3';
+import notGoodSound from '../assets/effects/not_good.mp3';
+import badSound from '../assets/effects/bad.mp3';
+import backgroundSound from '../assets/effects/background.mp3';
 
 import { useGameStore, type Judgment } from '../store/gameStore';
 import {
@@ -58,6 +63,7 @@ export class MainScene extends Phaser.Scene {
   private bandLastSpawnMs = 0;
   private bandStartMs = 0;
   private tutorialDemoWordSpawned = false;
+  private judgedWordIds = new Set<number>();
 
   private buttonShapes: Phaser.GameObjects.Image[] = [];
   private laneShapes: Phaser.GameObjects.Graphics[] = [];
@@ -111,13 +117,43 @@ export class MainScene extends Phaser.Scene {
     });
 
     this.load.image('background', tapMongBG);
+    this.load.audio('perfect_sound', perfectSound);
+    this.load.audio('good_sound', goodSound);
+    this.load.audio('not_good_sound', notGoodSound);
+    this.load.audio('bad_sound', badSound);
+    this.load.audio('background_sound', backgroundSound);
   }
 
   create() {
     const { width, height } = this.scale;
 
+    const canvas = this.game.canvas;
+    canvas.style.touchAction = 'manipulation';
+    canvas.addEventListener('dblclick', (e) => e.preventDefault());
+    let lastTouchEnd = 0;
+    canvas.addEventListener(
+      'touchend',
+      (e) => {
+        const now = Date.now();
+        if (now - lastTouchEnd <= 300) e.preventDefault();
+        lastTouchEnd = now;
+      },
+      { passive: false },
+    );
+
     const bg = this.add.image(width / 2, height / 2, 'background');
     bg.setDisplaySize(width, height);
+
+    const playBackgroundSound = () =>
+      this.sound.play('background_sound', { loop: true, volume: 0.3 });
+
+    if (this.sound.locked) {
+      // 모바일 크롬 등은 오토플레이 정책상 사용자 제스처가 있기 전까지
+      // AudioContext가 잠겨 있어 이 시점의 play() 호출이 무시된다.
+      this.sound.once(Phaser.Sound.Events.UNLOCKED, playBackgroundSound);
+    } else {
+      playBackgroundSound();
+    }
 
     this.anims.create({
       key: 'perfect_anim',
@@ -235,6 +271,7 @@ export class MainScene extends Phaser.Scene {
     // stream, so the player can read the popover without the band racing on.
     if (tutorialStep === 2) {
       this.updateColorBand(this.getLogicalNow(), true);
+      this.sound.pauseAll();
       return;
     }
     if (tutorialStep !== null) return;
@@ -251,6 +288,7 @@ export class MainScene extends Phaser.Scene {
     this.bandWords = [];
     this.bandStartMs = performance.now();
     this.bandLastSpawnMs = 0;
+    this.judgedWordIds.clear();
 
     const yPosition = TUTORIAL_BAND_TARGET_LAYOUT.top + TUTORIAL_BAND_TARGET_LAYOUT.height / 2;
     const railHeight = TUTORIAL_BAND_TARGET_LAYOUT.height;
@@ -303,6 +341,7 @@ export class MainScene extends Phaser.Scene {
       if (progressOf(w, now) < 1.1) return true;
       this.bandTexts.get(w.id)?.destroy();
       this.bandTexts.delete(w.id);
+      this.judgedWordIds.delete(w.id);
       return false;
     });
 
@@ -582,7 +621,7 @@ export class MainScene extends Phaser.Scene {
     });
   }
 
-  private playReactionEffect(sprite: Phaser.GameObjects.Sprite, animKey: string) {
+  private playReactionEffect(sprite: Phaser.GameObjects.Sprite, animKey: string, soundKey: string) {
     [
       this.perfectEffectSprite,
       this.goodEffectSprite,
@@ -597,6 +636,7 @@ export class MainScene extends Phaser.Scene {
 
     sprite.setVisible(true);
     sprite.play(animKey);
+    this.sound.play(soundKey);
     sprite.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
       sprite.setVisible(false);
       this.pendingEffectSprite.setVisible(true);
@@ -610,25 +650,34 @@ export class MainScene extends Phaser.Scene {
     const currentTargetColor = useGameStore.getState().currentTargetColor;
 
     if (color !== currentTargetColor) {
-      this.playReactionEffect(this.badEffectSprite, 'bad_anim');
+      this.playReactionEffect(this.badEffectSprite, 'bad_anim', 'bad_sound');
       useGameStore.getState().registerJudgment('bad');
       return;
     }
 
     const now = this.getLogicalNow();
-    const target = this.bandWords.find((w) => w.color === color) ?? null;
-    const absMs = target ? Math.abs(msUntilCenter(target, now)) : Infinity;
+    const target =
+      this.bandWords.find((w) => w.color === color && !this.judgedWordIds.has(w.id)) ?? null;
+    if (!target) return;
+    this.judgedWordIds.add(target.id);
+
+    const absMs = Math.abs(msUntilCenter(target, now));
 
     let judgment: Judgment;
     if (absMs <= JUDGE_PERFECT_MS) {
       judgment = 'perfect';
-      this.playReactionEffect(this.perfectEffectSprite, 'perfect_anim');
+      this.playReactionEffect(this.perfectEffectSprite, 'perfect_anim', 'perfect_sound');
     } else if (absMs <= JUDGE_GOOD_MS) {
       judgment = 'good';
-      this.playReactionEffect(this.goodEffectSprite, 'good_anim');
+      this.playReactionEffect(this.goodEffectSprite, 'good_anim', 'good_sound');
     } else {
       judgment = 'notGood';
-      this.playReactionEffect(this.notGoodEffectSprite, 'not_good_anim');
+      this.playReactionEffect(this.notGoodEffectSprite, 'not_good_anim', 'not_good_sound');
+    }
+    if (target) {
+      this.bandTexts.get(target.id)?.destroy();
+      this.bandTexts.delete(target.id);
+      this.bandWords = this.bandWords.filter((w) => w.id !== target.id);
     }
 
     useGameStore.getState().registerJudgment(judgment);
