@@ -1,8 +1,10 @@
-export type Difficulty = 'normal' | 'tapMaster' | 'tapLegend';
+import { type Judgment } from './gameStore';
 
-export type ColorId = 'Red' | 'Green' | 'Blue' | 'Yellow' | 'Purple';
+type Difficulty = 'normal' | 'tapMaster' | 'tapLegend';
 
-export interface DifficultyConfig {
+type ColorId = 'Red' | 'Green' | 'Blue' | 'Yellow' | 'Purple';
+
+interface DifficultyConfig {
   id: Difficulty;
   label: string;
   description: string;
@@ -11,7 +13,7 @@ export interface DifficultyConfig {
   showLanes: boolean;
 }
 
-export const DIFFICULTIES: Record<Difficulty, DifficultyConfig> = {
+const DIFFICULTIES: Record<Difficulty, DifficultyConfig> = {
   normal: {
     id: 'normal',
     label: 'Normal',
@@ -33,7 +35,7 @@ export const DIFFICULTIES: Record<Difficulty, DifficultyConfig> = {
     label: 'Tap Legend',
     description: '5가지 색상으로 게임을 진행합니다.',
     colors: ['Red', 'Green', 'Blue', 'Yellow', 'Purple'],
-    speedMultiplier: 1.5,
+    speedMultiplier: 1.55,
     showLanes: false,
   },
 };
@@ -44,4 +46,27 @@ export const COLOR_HEX: Record<ColorId, string> = {
   Blue: '#3d7ee0',
   Yellow: '#e0c53d',
   Purple: '#b89bf0',
+};
+
+const JUDGMENT_LABEL: Record<Judgment, string> = {
+  perfect: 'Perfect!',
+  good: 'Good',
+  notGood: 'Not Good',
+  bad: 'Bad',
+};
+
+const JUDGMENT_COLOR: Record<Judgment, string> = {
+  perfect: '#b89bf0',
+  good: '#3ba55c',
+  notGood: '#e0a53d',
+  bad: '#e0453f',
+};
+
+export {
+  type Difficulty,
+  type ColorId,
+  type DifficultyConfig,
+  DIFFICULTIES,
+  JUDGMENT_LABEL,
+  JUDGMENT_COLOR,
 };

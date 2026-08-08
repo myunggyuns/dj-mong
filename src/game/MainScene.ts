@@ -5,87 +5,56 @@ import tapMongNotGoodReaction from '../assets/tap-mong-notgood.png';
 import tapMongBadReaction from '../assets/tap-mong-bad.png';
 import tapMongPendingReaction from '../assets/tap-mong-pending.png';
 import tapMongBG from '../assets/tap-mong-bg.png';
+import perfectSound from '../assets/effects/perfect.mp4';
+import goodSound from '../assets/effects/good.mp4';
+import notGoodSound from '../assets/effects/not_good.mp4';
+import badSound from '../assets/effects/bad.mp4';
+import backgroundSound from '../assets/effects/background.mp4';
 
 import { useGameStore, type Judgment } from '../store/gameStore';
-import { DIFFICULTIES, COLOR_HEX, type ColorId } from '../store/difficulties';
+import {
+  DIFFICULTIES,
+  COLOR_HEX,
+  type ColorId,
+  JUDGMENT_COLOR,
+  JUDGMENT_LABEL,
+} from '../store/difficulties';
+
 import {
   shuffledSet,
   lerp,
   createWord,
   progressOf,
   msUntilCenter,
+  withAlpha,
+  shadeColor,
   type BandWord,
-} from './bandEngine';
+} from '../utils/game';
 
-const BAND_SESSION_SECONDS = 60;
-const BAND_BASE_INTERVAL_MS = 1000;
-const BAND_MIN_INTERVAL_MS = 500;
-const BAND_BASE_TRAVEL_MS = 1800;
-const BAND_MIN_TRAVEL_MS = 1100;
-const BAND_HEIGHT = 56;
-const BAND_MARGIN_X = 12;
-const BAND_ZONE_WIDTH = 100;
-
-const BUTTON_SIZE = 45;
-const BUTTON_RADIUS = BUTTON_SIZE / 2;
-const BUTTON_GLOW_PADDING = 12;
-const BUTTON_PRESS_SCALE = 0.88;
-const BUTTON_MIN_DISTANCE = 50;
-const BUTTON_LANE_EDGE_MARGIN = 16;
-const BUTTON_CHARACTER_EXCLUSION_HALF_WIDTH = 90;
-const BUTTON_VERTICAL_TOP_MARGIN = 100;
-const BUTTON_VERTICAL_BOTTOM_MARGIN = 200;
-const BUTTON_PLACEMENT_MAX_ATTEMPTS = 200;
-
-const TAP_MONG_RATIO = 1.8;
-
-const JUDGE_PERFECT_MS = 120;
-const JUDGE_GOOD_MS = 280;
-
-const FOOTER_HEIGHT = 56;
-
-// Phaser draws these regions onto its internal <canvas>, so they have no DOM
-// node for the tutorial (driver.js) to target. PlayScreen renders invisible
-// overlay divs positioned with this same geometry so driver.js has something
-// to highlight.
-export const TUTORIAL_BAND_TARGET_LAYOUT = { top: 45, height: 60 };
-export const TUTORIAL_BUTTON_TARGET_LAYOUT = {
-  top: BAND_HEIGHT + BUTTON_RADIUS + BUTTON_VERTICAL_TOP_MARGIN - 20,
-  bottomOffset: BUTTON_RADIUS + BUTTON_VERTICAL_BOTTOM_MARGIN - 25,
-  sideMargin: BUTTON_LANE_EDGE_MARGIN + BUTTON_RADIUS - 20,
-};
-
-const JUDGMENT_LABEL: Record<Judgment, string> = {
-  perfect: 'Perfect!',
-  good: 'Good',
-  notGood: 'Not Good',
-  bad: 'Bad',
-};
-
-const JUDGMENT_COLOR: Record<Judgment, string> = {
-  perfect: '#b89bf0',
-  good: '#3ba55c',
-  notGood: '#e0a53d',
-  bad: '#e0453f',
-};
-
-function hexToRgb(hex: string) {
-  const n = parseInt(hex.slice(1), 16);
-  return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
-}
-
-// color-mix(hex, white/black percent)에 대응하는 캔버스용 셰이딩 헬퍼.
-function shadeColor(hex: string, percent: number) {
-  const { r, g, b } = hexToRgb(hex);
-  const amt = Math.round(2.55 * percent);
-  const clamp = (v: number) => Math.min(255, Math.max(0, v));
-  return `rgb(${clamp(r + amt)}, ${clamp(g + amt)}, ${clamp(b + amt)})`;
-}
-
-function withAlpha(hex: string, alpha: number) {
-  const { r, g, b } = hexToRgb(hex);
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-}
+import {
+  BAND_SESSION_SECONDS,
+  BAND_BASE_INTERVAL_MS,
+  BAND_MIN_INTERVAL_MS,
+  BAND_BASE_TRAVEL_MS,
+  BAND_MIN_TRAVEL_MS,
+  BAND_HEIGHT,
+  BAND_MARGIN_X,
+  BAND_ZONE_WIDTH,
+  BUTTON_RADIUS,
+  BUTTON_GLOW_PADDING,
+  BUTTON_PRESS_SCALE,
+  BUTTON_MIN_DISTANCE,
+  BUTTON_LANE_EDGE_MARGIN,
+  BUTTON_CHARACTER_EXCLUSION_HALF_WIDTH,
+  BUTTON_VERTICAL_TOP_MARGIN,
+  BUTTON_VERTICAL_BOTTOM_MARGIN,
+  BUTTON_PLACEMENT_MAX_ATTEMPTS,
+  TAP_MONG_RATIO,
+  JUDGE_PERFECT_MS,
+  JUDGE_GOOD_MS,
+  FOOTER_HEIGHT,
+  TUTORIAL_BAND_TARGET_LAYOUT,
+} from '../constant/game';
 
 export class MainScene extends Phaser.Scene {
   private bandWords: BandWord[] = [];
@@ -94,14 +63,26 @@ export class MainScene extends Phaser.Scene {
   private bandLastSpawnMs = 0;
   private bandStartMs = 0;
   private tutorialDemoWordSpawned = false;
+  private judgedWordIds = new Set<number>();
 
   private buttonShapes: Phaser.GameObjects.Image[] = [];
-  private laneShapes: Phaser.GameObjects.Graphics[] = [];
 
   private hudScoreText!: Phaser.GameObjects.Text;
   private hudComboText!: Phaser.GameObjects.Text;
   private hudJudgmentText!: Phaser.GameObjects.Text;
   private unsubscribeStore: (() => void) | null = null;
+  private unsubscribePause: (() => void) | null = null;
+  private unsubscribeGameStart: (() => void) | null = null;
+
+  // iOS Safari는 <audio>/Web Audio로 낸 소리는 무음 스위치를 따라 꺼버리지만,
+  // <video>의 오디오 트랙은 예외적으로 무음 스위치를 무시하고 재생된다. 그래서
+  // Phaser의 사운드 매니저 대신 숨겨진 video 엘리먼트로 직접 재생한다.
+  private soundVideos = new Map<string, HTMLVideoElement>();
+
+  // 일시정지 동안 흐른 실제 시간을 빼서 밴드 로직이 쓰는 시계가
+  // 정지 구간만큼 멈춰 있던 것처럼 보이게 만든다.
+  private pausedAccumMs = 0;
+  private pauseStartedAt: number | null = null;
 
   private perfectEffectSprite!: Phaser.GameObjects.Sprite;
   private goodEffectSprite!: Phaser.GameObjects.Sprite;
@@ -141,10 +122,61 @@ export class MainScene extends Phaser.Scene {
     });
 
     this.load.image('background', tapMongBG);
+
+    this.load.on(Phaser.Loader.Events.FILE_LOAD_ERROR, (file: Phaser.Loader.File) => {
+      console.error('[MainScene] failed to load asset', file.key, file.src);
+    });
+  }
+
+  private createSoundVideos() {
+    const sources: Record<string, string> = {
+      background_sound: backgroundSound,
+      perfect_sound: perfectSound,
+      good_sound: goodSound,
+      not_good_sound: notGoodSound,
+      bad_sound: badSound,
+    };
+
+    Object.entries(sources).forEach(([key, src]) => {
+      const video = document.createElement('video');
+      video.src = src;
+      video.preload = 'auto';
+      video.playsInline = true;
+      video.loop = key === 'background_sound';
+      video.volume = key === 'background_sound' ? 0.3 : 1;
+      video.style.position = 'fixed';
+      video.style.width = '1px';
+      video.style.height = '1px';
+      video.style.opacity = '0';
+      video.style.pointerEvents = 'none';
+      document.body.appendChild(video);
+      this.soundVideos.set(key, video);
+    });
+  }
+
+  private playTrack(key: string) {
+    const video = this.soundVideos.get(key);
+    if (!video) return;
+    video.currentTime = 0;
+    video.play().catch(() => {});
   }
 
   create() {
     const { width, height } = this.scale;
+
+    const canvas = this.game.canvas;
+    canvas.style.touchAction = 'manipulation';
+    canvas.addEventListener('dblclick', (e) => e.preventDefault());
+    let lastTouchEnd = 0;
+    canvas.addEventListener(
+      'touchend',
+      (e) => {
+        const now = Date.now();
+        if (now - lastTouchEnd <= 300) e.preventDefault();
+        lastTouchEnd = now;
+      },
+      { passive: false },
+    );
 
     const bg = this.add.image(width / 2, height / 2, 'background');
     bg.setDisplaySize(width, height);
@@ -223,9 +255,60 @@ export class MainScene extends Phaser.Scene {
     // this.drawButtonLanes();
     this.spawnButtons();
     this.createHud();
+    this.createSoundVideos();
+    this.watchPauseState();
+    this.watchGameStart();
 
-    this.events.once('shutdown', () => this.unsubscribeStore?.());
-    this.events.once('destroy', () => this.unsubscribeStore?.());
+    const cleanup = () => {
+      this.unsubscribeStore?.();
+      this.unsubscribePause?.();
+      this.unsubscribeGameStart?.();
+      this.soundVideos.forEach((video) => video.remove());
+      this.soundVideos.clear();
+    };
+    this.events.once('shutdown', cleanup);
+    this.events.once('destroy', cleanup);
+  }
+
+  // PlayScreen의 "시작하기" 모달을 탭하는 순간(=진짜 유저 제스처 콜스택 안) 이 콜백이
+  // 동기적으로 실행된다. 그 자리에서 바로 BGM을 재생해야 iOS Safari 등에서 오토플레이
+  // 정책에 안 걸리고 확실하게 소리가 난다.
+  private watchGameStart() {
+    if (useGameStore.getState().hasStarted) this.beginSession();
+
+    this.unsubscribeGameStart = useGameStore.subscribe((next, prev) => {
+      if (next.hasStarted === prev.hasStarted || !next.hasStarted) return;
+      this.beginSession();
+    });
+  }
+
+  private beginSession() {
+    this.bandStartMs = performance.now();
+    this.bandLastSpawnMs = 0;
+    this.playTrack('background_sound');
+  }
+
+  private watchPauseState() {
+    this.unsubscribePause = useGameStore.subscribe((next, prev) => {
+      if (next.isPaused === prev.isPaused) return;
+      if (next.isPaused) {
+        this.pauseStartedAt = performance.now();
+        this.scene.pause();
+      } else {
+        if (this.pauseStartedAt !== null) {
+          this.pausedAccumMs += performance.now() - this.pauseStartedAt;
+          this.pauseStartedAt = null;
+        }
+        this.scene.resume();
+      }
+    });
+  }
+
+  // 일시정지로 멈춰 있던 시간만큼 뒤로 당긴 논리 시계. 밴드 스폰 간격/이동 진행률처럼
+  // performance.now() 기준으로 계산하는 로직은 전부 이 값을 써야 정지 후 재개했을 때
+  // 밴드가 멈춰 있던 시간만큼 순간이동하지 않는다.
+  private getLogicalNow(): number {
+    return performance.now() - this.pausedAccumMs;
   }
 
   update() {
@@ -234,12 +317,13 @@ export class MainScene extends Phaser.Scene {
     // Step 2 demos the band with a single word instead of the live, endless
     // stream, so the player can read the popover without the band racing on.
     if (tutorialStep === 2) {
-      this.updateColorBand(performance.now(), true);
+      this.updateColorBand(this.getLogicalNow(), true);
       return;
     }
     if (tutorialStep !== null) return;
+    if (!useGameStore.getState().hasStarted) return;
 
-    this.updateColorBand(performance.now(), false);
+    this.updateColorBand(this.getLogicalNow(), false);
   }
 
   private createColorBand() {
@@ -251,6 +335,7 @@ export class MainScene extends Phaser.Scene {
     this.bandWords = [];
     this.bandStartMs = performance.now();
     this.bandLastSpawnMs = 0;
+    this.judgedWordIds.clear();
 
     const yPosition = TUTORIAL_BAND_TARGET_LAYOUT.top + TUTORIAL_BAND_TARGET_LAYOUT.height / 2;
     const railHeight = TUTORIAL_BAND_TARGET_LAYOUT.height;
@@ -303,6 +388,7 @@ export class MainScene extends Phaser.Scene {
       if (progressOf(w, now) < 1.1) return true;
       this.bandTexts.get(w.id)?.destroy();
       this.bandTexts.delete(w.id);
+      this.judgedWordIds.delete(w.id);
       return false;
     });
 
@@ -352,37 +438,6 @@ export class MainScene extends Phaser.Scene {
     ];
 
     return { laneTop, laneBottom, lanes };
-  }
-
-  private drawButtonLanes() {
-    const difficulty = useGameStore.getState().difficulty;
-    const config = DIFFICULTIES[difficulty];
-
-    this.laneShapes.forEach((shape) => shape.destroy());
-    this.laneShapes = [];
-
-    if (!config.showLanes) return;
-
-    const { laneTop, laneBottom, lanes } = this.getButtonLaneBounds();
-    if (laneBottom <= laneTop) return;
-
-    lanes.forEach((lane) => {
-      if (lane.maxX <= lane.minX) return;
-
-      const graphics = this.add.graphics();
-      graphics.fillStyle(0xffffff, 0.1);
-      graphics.lineStyle(1, 0xffffff, 0.25);
-
-      const x = lane.minX - BUTTON_RADIUS;
-      const y = laneTop - BUTTON_RADIUS;
-      const laneWidth = lane.maxX - lane.minX + BUTTON_RADIUS * 2;
-      const laneHeight = laneBottom - laneTop + BUTTON_RADIUS * 2;
-
-      graphics.fillRoundedRect(x, y, laneWidth, laneHeight, 14);
-      graphics.strokeRoundedRect(x, y, laneWidth, laneHeight, 14);
-      graphics.setDepth(-1);
-      this.laneShapes.push(graphics);
-    });
   }
 
   // 색상별 캔버스 텍스처를 한 번만 생성해 캐싱한다: radial-gradient 하이라이트/그림자,
@@ -613,7 +668,7 @@ export class MainScene extends Phaser.Scene {
     });
   }
 
-  private playReactionEffect(sprite: Phaser.GameObjects.Sprite, animKey: string) {
+  private playReactionEffect(sprite: Phaser.GameObjects.Sprite, animKey: string, soundKey: string) {
     [
       this.perfectEffectSprite,
       this.goodEffectSprite,
@@ -628,6 +683,7 @@ export class MainScene extends Phaser.Scene {
 
     sprite.setVisible(true);
     sprite.play(animKey);
+    this.playTrack(soundKey);
     sprite.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => {
       sprite.setVisible(false);
       this.pendingEffectSprite.setVisible(true);
@@ -636,59 +692,89 @@ export class MainScene extends Phaser.Scene {
 
   private handleButtonTap(color: ColorId) {
     if (useGameStore.getState().tutorialStep !== null) return;
+    if (useGameStore.getState().isPaused) return;
+    if (!useGameStore.getState().hasStarted) return;
 
     const currentTargetColor = useGameStore.getState().currentTargetColor;
 
     if (color !== currentTargetColor) {
-      this.playReactionEffect(this.badEffectSprite, 'bad_anim');
+      this.playReactionEffect(this.badEffectSprite, 'bad_anim', 'bad_sound');
       useGameStore.getState().registerJudgment('bad');
       return;
     }
 
-    const now = performance.now();
-    const target = this.bandWords.find((w) => w.color === color) ?? null;
-    const absMs = target ? Math.abs(msUntilCenter(target, now)) : Infinity;
+    const now = this.getLogicalNow();
+    const target =
+      this.bandWords.find((w) => w.color === color && !this.judgedWordIds.has(w.id)) ?? null;
+    if (!target) return;
+    this.judgedWordIds.add(target.id);
+
+    const absMs = Math.abs(msUntilCenter(target, now));
 
     let judgment: Judgment;
     if (absMs <= JUDGE_PERFECT_MS) {
       judgment = 'perfect';
-      this.playReactionEffect(this.perfectEffectSprite, 'perfect_anim');
+      this.playReactionEffect(this.perfectEffectSprite, 'perfect_anim', 'perfect_sound');
     } else if (absMs <= JUDGE_GOOD_MS) {
       judgment = 'good';
-      this.playReactionEffect(this.goodEffectSprite, 'good_anim');
+      this.playReactionEffect(this.goodEffectSprite, 'good_anim', 'good_sound');
     } else {
       judgment = 'notGood';
-      this.playReactionEffect(this.notGoodEffectSprite, 'not_good_anim');
+      this.playReactionEffect(this.notGoodEffectSprite, 'not_good_anim', 'not_good_sound');
     }
-
-    // if (target) {
-    //   this.bandTexts.get(target.id)?.destroy();
-    //   this.bandTexts.delete(target.id);
-    //   this.bandWords = this.bandWords.filter((w) => w.id !== target.id);
-    // }
+    if (target) {
+      this.bandTexts.get(target.id)?.destroy();
+      this.bandTexts.delete(target.id);
+      this.bandWords = this.bandWords.filter((w) => w.id !== target.id);
+    }
 
     useGameStore.getState().registerJudgment(judgment);
   }
+
+  // private drawButtonLanes() {
+  //   const difficulty = useGameStore.getState().difficulty;
+  //   const config = DIFFICULTIES[difficulty];
+
+  //   this.laneShapes.forEach((shape) => shape.destroy());
+  //   this.laneShapes = [];
+
+  //   if (!config.showLanes) return;
+
+  //   const { laneTop, laneBottom, lanes } = this.getButtonLaneBounds();
+  //   if (laneBottom <= laneTop) return;
+
+  //   lanes.forEach((lane) => {
+  //     if (lane.maxX <= lane.minX) return;
+
+  //     const graphics = this.add.graphics();
+  //     graphics.fillStyle(0xffffff, 0.1);
+  //     graphics.lineStyle(1, 0xffffff, 0.25);
+
+  //     const x = lane.minX - BUTTON_RADIUS;
+  //     const y = laneTop - BUTTON_RADIUS;
+  //     const laneWidth = lane.maxX - lane.minX + BUTTON_RADIUS * 2;
+  //     const laneHeight = laneBottom - laneTop + BUTTON_RADIUS * 2;
+
+  //     graphics.fillRoundedRect(x, y, laneWidth, laneHeight, 14);
+  //     graphics.strokeRoundedRect(x, y, laneWidth, laneHeight, 14);
+  //     graphics.setDepth(-1);
+  //     this.laneShapes.push(graphics);
+  //   });
+  // }
 }
 
 export function createGameConfig(parent: HTMLDivElement): Phaser.Types.Core.GameConfig {
   return {
     type: Phaser.AUTO,
     parent,
-    // backgroundColor: '#1a1a2e',
-    // scale: {
-    //   mode: Phaser.Scale.FIT,
-    //   autoCenter: Phaser.Scale.CENTER_BOTH,
-    //   width: 480,
-    //   height: 853, // 9:16 비율
-    // },
     width: '100%',
     height: '100%',
+    // audio: { disableWebAudio: true },
     physics: {
       default: 'arcade',
       arcade: {
         gravity: { x: 0, y: 0 },
-        debug: false,
+        debug: true,
       },
     },
     scene: MainScene,

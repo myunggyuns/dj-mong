@@ -8,7 +8,8 @@
 
 .play-spec-box {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
   font-size: 14px;
@@ -19,10 +20,125 @@
   font-size: 20px;
 }
 
+.pause-button {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-self: center;
+}
+
 .play-box {
   position: relative;
   flex: 1 1 auto;
   min-height: 0;
+}
+
+.pause-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 8, 16, 0.72);
+  z-index: 20;
+}
+
+.pause-modal {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  min-width: 220px;
+  padding: 24px 28px;
+  border-radius: 16px;
+  background: #1a1a2e;
+  border: 1px solid rgba(184, 155, 240, 0.3);
+  box-shadow: 0 0 32px rgba(184, 155, 240, 0.25);
+  text-align: center;
+}
+
+.pause-title {
+  margin: 0 0 8px;
+  color: #fff;
+  font-size: 20px;
+}
+
+.pause-resume-button {
+  padding: 10px 20px;
+  border-radius: 10px;
+  border: none;
+  background: #b89bf0;
+  color: #1a1a2e;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.pause-exit-button {
+  padding: 10px 20px;
+  border-radius: 10px;
+  border: 1px solid #444;
+  background: transparent;
+  color: #aaa;
+  cursor: pointer;
+}
+
+.start-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 8, 16, 0.72);
+  z-index: 20;
+}
+
+.start-modal {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 16px;
+  min-width: 220px;
+  padding: 24px 28px;
+  border-radius: 16px;
+  background: #1a1a2e;
+  border: 1px solid rgba(184, 155, 240, 0.3);
+  box-shadow: 0 0 32px rgba(184, 155, 240, 0.25);
+  text-align: center;
+}
+
+.start-notice {
+  margin: 0;
+  color: #ccc;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.start-button {
+  padding: 14px 20px;
+  border-radius: 10px;
+  border: none;
+  background: #b89bf0;
+  color: #1a1a2e;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.start-back-button {
+  padding: 10px 20px;
+  border-radius: 10px;
+  border: 1px solid #444;
+  background: transparent;
+  color: #aaa;
+  cursor: pointer;
 }
 
 .tutorial-target {
@@ -55,6 +171,7 @@
 
 @media screen and (max-width: 430px) {
   .play-spec-box {
-    padding: 0px 16px;
+    padding-left: 16px;
+    padding-right: 8px;
   }
 }
