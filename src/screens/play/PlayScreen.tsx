@@ -7,12 +7,25 @@ import { TUTORIAL_BAND_TARGET_LAYOUT, TUTORIAL_BUTTON_TARGET_LAYOUT } from '../.
 const SHAKE_JUDGMENTS = new Set(['notGood', 'bad']);
 
 export default function PlayScreen() {
-  const { timeLeft, tick, tutorialStep, lastJudgment, judgmentSeq } = useGameStore();
+  const {
+    timeLeft,
+    tick,
+    tutorialStep,
+    lastJudgment,
+    judgmentSeq,
+    isPaused,
+    pauseGame,
+    resumeGame,
+    resetSession,
+  } = useGameStore();
   const [isShaking, setIsShaking] = useState(false);
 
   useEffect(() => {
     if (tutorialStep !== null) return;
-    const interval = setInterval(() => tick(0.1), 100);
+    const interval = setInterval(() => {
+      if (useGameStore.getState().isPaused) return;
+      tick(0.1);
+    }, 100);
     return () => clearInterval(interval);
   }, [tick, tutorialStep]);
 
@@ -29,10 +42,42 @@ export default function PlayScreen() {
         <span>
           ⏱ <span className="hud-number">{Math.ceil(timeLeft)}</span> s
         </span>
+        {tutorialStep === null && (
+          <button
+            type="button"
+            className={styles['pause-button']}
+            onClick={pauseGame}
+            aria-label="일시정지"
+          >
+            ⏸
+          </button>
+        )}
       </div>
 
       <div className={`${styles['play-box']} ${isShaking ? styles.shake : ''}`}>
         <GameCanvas />
+
+        {isPaused && (
+          <div className={styles['pause-overlay']}>
+            <div className={styles['pause-modal']}>
+              <h2 className={styles['pause-title']}>일시정지</h2>
+              <button
+                type="button"
+                className={styles['pause-resume-button']}
+                onClick={resumeGame}
+              >
+                계속하기
+              </button>
+              <button
+                type="button"
+                className={styles['pause-exit-button']}
+                onClick={resetSession}
+              >
+                나가기
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Phaser draws the band/buttons onto its own <canvas>, invisible to
             driver.js — these overlays give the tutorial real DOM targets. */}

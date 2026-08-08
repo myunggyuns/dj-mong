@@ -26,6 +26,7 @@ interface GameState {
   judgmentSeq: number;
   tutorialStep: number | null;
   currentTargetColor: ColorId | null;
+  isPaused: boolean;
 
   startTutorial: () => void;
   nextTutorial: () => void;
@@ -40,6 +41,8 @@ interface GameState {
   registerJudgment: (judgment: Judgment) => void;
   endGame: () => void;
   resetSession: () => void;
+  pauseGame: () => void;
+  resumeGame: () => void;
 }
 
 export const useGameStore = create<GameState>((set, get) => ({
@@ -55,6 +58,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   judgmentSeq: 0,
   tutorialStep: null,
   currentTargetColor: null,
+  isPaused: false,
 
   startTutorial: () => set({ screen: 'main', tutorialStep: 1 }),
   nextTutorial: () =>
@@ -102,9 +106,11 @@ export const useGameStore = create<GameState>((set, get) => ({
       perfectStreak: 0,
       timeLeft: SESSION_SECONDS,
       lastJudgment: null,
+      isPaused: false,
     }),
 
   tick: (deltaSeconds) => {
+    if (get().isPaused) return;
     const timeLeft = Math.max(0, get().timeLeft - deltaSeconds);
     set({ timeLeft });
     if (timeLeft <= 0) get().endGame();
@@ -145,7 +151,12 @@ export const useGameStore = create<GameState>((set, get) => ({
     set({ screen: 'result' });
   },
 
-  resetSession: () => set({ screen: 'main' }),
+  resetSession: () => set({ screen: 'main', isPaused: false }),
+
+  pauseGame: () => {
+    if (get().screen === 'playing' && get().tutorialStep === null) set({ isPaused: true });
+  },
+  resumeGame: () => set({ isPaused: false }),
 }));
 
 export { DIFFICULTIES };

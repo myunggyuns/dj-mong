@@ -102,6 +102,12 @@ export class MainScene extends Phaser.Scene {
   private hudComboText!: Phaser.GameObjects.Text;
   private hudJudgmentText!: Phaser.GameObjects.Text;
   private unsubscribeStore: (() => void) | null = null;
+  private unsubscribePause: (() => void) | null = null;
+
+  // 일시정지 동안 흐른 실제 시간을 빼서 밴드 로직이 쓰는 시계가
+  // 정지 구간만큼 멈춰 있던 것처럼 보이게 만든다.
+  private pausedAccumMs = 0;
+  private pauseStartedAt: number | null = null;
 
   private perfectEffectSprite!: Phaser.GameObjects.Sprite;
   private goodEffectSprite!: Phaser.GameObjects.Sprite;
@@ -223,9 +229,39 @@ export class MainScene extends Phaser.Scene {
     // this.drawButtonLanes();
     this.spawnButtons();
     this.createHud();
+    this.watchPauseState();
 
-    this.events.once('shutdown', () => this.unsubscribeStore?.());
-    this.events.once('destroy', () => this.unsubscribeStore?.());
+    this.events.once('shutdown', () => {
+      this.unsubscribeStore?.();
+      this.unsubscribePause?.();
+    });
+    this.events.once('destroy', () => {
+      this.unsubscribeStore?.();
+      this.unsubscribePause?.();
+    });
+  }
+
+  private watchPauseState() {
+    this.unsubscribePause = useGameStore.subscribe((next, prev) => {
+      if (next.isPaused === prev.isPaused) return;
+      if (next.isPaused) {
+        this.pauseStartedAt = performance.now();
+        this.scene.pause();
+      } else {
+        if (this.pauseStartedAt !== null) {
+          this.pausedAccumMs += performance.now() - this.pauseStartedAt;
+          this.pauseStartedAt = null;
+        }
+        this.scene.resume();
+      }
+    });
+  }
+
+  // 일시정지로 멈춰 있던 시간만큼 뒤로 당긴 논리 시계. 밴드 스폰 간격/이동 진행률처럼
+  // performance.now() 기준으로 계산하는 로직은 전부 이 값을 써야 정지 후 재개했을 때
+  // 밴드가 멈춰 있던 시간만큼 순간이동하지 않는다.
+  private getLogicalNow(): number {
+    return performance.now() - this.pausedAccumMs;
   }
 
   update() {
@@ -234,12 +270,12 @@ export class MainScene extends Phaser.Scene {
     // Step 2 demos the band with a single word instead of the live, endless
     // stream, so the player can read the popover without the band racing on.
     if (tutorialStep === 2) {
-      this.updateColorBand(performance.now(), true);
+      this.updateColorBand(this.getLogicalNow(), true);
       return;
     }
     if (tutorialStep !== null) return;
 
-    this.updateColorBand(performance.now(), false);
+    this.updateColorBand(this.getLogicalNow(), false);
   }
 
   private createColorBand() {
@@ -636,6 +672,7 @@ export class MainScene extends Phaser.Scene {
 
   private handleButtonTap(color: ColorId) {
     if (useGameStore.getState().tutorialStep !== null) return;
+    if (useGameStore.getState().isPaused) return;
 
     const currentTargetColor = useGameStore.getState().currentTargetColor;
 
@@ -645,7 +682,7 @@ export class MainScene extends Phaser.Scene {
       return;
     }
 
-    const now = performance.now();
+    const now = this.getLogicalNow();
     const target = this.bandWords.find((w) => w.color === color) ?? null;
     const absMs = target ? Math.abs(msUntilCenter(target, now)) : Infinity;
 
