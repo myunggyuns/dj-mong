@@ -7,85 +7,49 @@ import tapMongPendingReaction from '../assets/tap-mong-pending.png';
 import tapMongBG from '../assets/tap-mong-bg.png';
 
 import { useGameStore, type Judgment } from '../store/gameStore';
-import { DIFFICULTIES, COLOR_HEX, type ColorId } from '../store/difficulties';
+import {
+  DIFFICULTIES,
+  COLOR_HEX,
+  type ColorId,
+  JUDGMENT_COLOR,
+  JUDGMENT_LABEL,
+} from '../store/difficulties';
+
 import {
   shuffledSet,
   lerp,
   createWord,
   progressOf,
   msUntilCenter,
+  withAlpha,
+  shadeColor,
   type BandWord,
-} from './bandEngine';
+} from '../utils/game';
 
-const BAND_SESSION_SECONDS = 60;
-const BAND_BASE_INTERVAL_MS = 1000;
-const BAND_MIN_INTERVAL_MS = 500;
-const BAND_BASE_TRAVEL_MS = 1800;
-const BAND_MIN_TRAVEL_MS = 1100;
-const BAND_HEIGHT = 56;
-const BAND_MARGIN_X = 12;
-const BAND_ZONE_WIDTH = 100;
-
-const BUTTON_SIZE = 45;
-const BUTTON_RADIUS = BUTTON_SIZE / 2;
-const BUTTON_GLOW_PADDING = 12;
-const BUTTON_PRESS_SCALE = 0.88;
-const BUTTON_MIN_DISTANCE = 50;
-const BUTTON_LANE_EDGE_MARGIN = 16;
-const BUTTON_CHARACTER_EXCLUSION_HALF_WIDTH = 90;
-const BUTTON_VERTICAL_TOP_MARGIN = 100;
-const BUTTON_VERTICAL_BOTTOM_MARGIN = 200;
-const BUTTON_PLACEMENT_MAX_ATTEMPTS = 200;
-
-const TAP_MONG_RATIO = 1.8;
-
-const JUDGE_PERFECT_MS = 120;
-const JUDGE_GOOD_MS = 280;
-
-const FOOTER_HEIGHT = 56;
-
-// Phaser draws these regions onto its internal <canvas>, so they have no DOM
-// node for the tutorial (driver.js) to target. PlayScreen renders invisible
-// overlay divs positioned with this same geometry so driver.js has something
-// to highlight.
-export const TUTORIAL_BAND_TARGET_LAYOUT = { top: 45, height: 60 };
-export const TUTORIAL_BUTTON_TARGET_LAYOUT = {
-  top: BAND_HEIGHT + BUTTON_RADIUS + BUTTON_VERTICAL_TOP_MARGIN - 20,
-  bottomOffset: BUTTON_RADIUS + BUTTON_VERTICAL_BOTTOM_MARGIN - 25,
-  sideMargin: BUTTON_LANE_EDGE_MARGIN + BUTTON_RADIUS - 20,
-};
-
-const JUDGMENT_LABEL: Record<Judgment, string> = {
-  perfect: 'Perfect!',
-  good: 'Good',
-  notGood: 'Not Good',
-  bad: 'Bad',
-};
-
-const JUDGMENT_COLOR: Record<Judgment, string> = {
-  perfect: '#b89bf0',
-  good: '#3ba55c',
-  notGood: '#e0a53d',
-  bad: '#e0453f',
-};
-
-function hexToRgb(hex: string) {
-  const n = parseInt(hex.slice(1), 16);
-  return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
-}
-
-// color-mix(hex, white/black percent)에 대응하는 캔버스용 셰이딩 헬퍼.
-function shadeColor(hex: string, percent: number) {
-  const { r, g, b } = hexToRgb(hex);
-  const amt = Math.round(2.55 * percent);
-  const clamp = (v: number) => Math.min(255, Math.max(0, v));
-  return `rgb(${clamp(r + amt)}, ${clamp(g + amt)}, ${clamp(b + amt)})`;
-}
-
-function withAlpha(hex: string, alpha: number) {
-  const { r, g, b } = hexToRgb(hex);
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-}
+import {
+  BAND_SESSION_SECONDS,
+  BAND_BASE_INTERVAL_MS,
+  BAND_MIN_INTERVAL_MS,
+  BAND_BASE_TRAVEL_MS,
+  BAND_MIN_TRAVEL_MS,
+  BAND_HEIGHT,
+  BAND_MARGIN_X,
+  BAND_ZONE_WIDTH,
+  BUTTON_RADIUS,
+  BUTTON_GLOW_PADDING,
+  BUTTON_PRESS_SCALE,
+  BUTTON_MIN_DISTANCE,
+  BUTTON_LANE_EDGE_MARGIN,
+  BUTTON_CHARACTER_EXCLUSION_HALF_WIDTH,
+  BUTTON_VERTICAL_TOP_MARGIN,
+  BUTTON_VERTICAL_BOTTOM_MARGIN,
+  BUTTON_PLACEMENT_MAX_ATTEMPTS,
+  TAP_MONG_RATIO,
+  JUDGE_PERFECT_MS,
+  JUDGE_GOOD_MS,
+  FOOTER_HEIGHT,
+  TUTORIAL_BAND_TARGET_LAYOUT,
+} from '../constant/game';
 
 export class MainScene extends Phaser.Scene {
   private bandWords: BandWord[] = [];
@@ -390,37 +354,6 @@ export class MainScene extends Phaser.Scene {
     return { laneTop, laneBottom, lanes };
   }
 
-  private drawButtonLanes() {
-    const difficulty = useGameStore.getState().difficulty;
-    const config = DIFFICULTIES[difficulty];
-
-    this.laneShapes.forEach((shape) => shape.destroy());
-    this.laneShapes = [];
-
-    if (!config.showLanes) return;
-
-    const { laneTop, laneBottom, lanes } = this.getButtonLaneBounds();
-    if (laneBottom <= laneTop) return;
-
-    lanes.forEach((lane) => {
-      if (lane.maxX <= lane.minX) return;
-
-      const graphics = this.add.graphics();
-      graphics.fillStyle(0xffffff, 0.1);
-      graphics.lineStyle(1, 0xffffff, 0.25);
-
-      const x = lane.minX - BUTTON_RADIUS;
-      const y = laneTop - BUTTON_RADIUS;
-      const laneWidth = lane.maxX - lane.minX + BUTTON_RADIUS * 2;
-      const laneHeight = laneBottom - laneTop + BUTTON_RADIUS * 2;
-
-      graphics.fillRoundedRect(x, y, laneWidth, laneHeight, 14);
-      graphics.strokeRoundedRect(x, y, laneWidth, laneHeight, 14);
-      graphics.setDepth(-1);
-      this.laneShapes.push(graphics);
-    });
-  }
-
   // 색상별 캔버스 텍스처를 한 번만 생성해 캐싱한다: radial-gradient 하이라이트/그림자,
   // 바깥쪽 glow, 안쪽 위-밝음/아래-어두움 립(inset shadow처럼 보이게)까지 직접 그린다.
   private ensureButtonTexture(color: ColorId): string {
@@ -698,27 +631,45 @@ export class MainScene extends Phaser.Scene {
       this.playReactionEffect(this.notGoodEffectSprite, 'not_good_anim');
     }
 
-    // if (target) {
-    //   this.bandTexts.get(target.id)?.destroy();
-    //   this.bandTexts.delete(target.id);
-    //   this.bandWords = this.bandWords.filter((w) => w.id !== target.id);
-    // }
-
     useGameStore.getState().registerJudgment(judgment);
   }
+
+  // private drawButtonLanes() {
+  //   const difficulty = useGameStore.getState().difficulty;
+  //   const config = DIFFICULTIES[difficulty];
+
+  //   this.laneShapes.forEach((shape) => shape.destroy());
+  //   this.laneShapes = [];
+
+  //   if (!config.showLanes) return;
+
+  //   const { laneTop, laneBottom, lanes } = this.getButtonLaneBounds();
+  //   if (laneBottom <= laneTop) return;
+
+  //   lanes.forEach((lane) => {
+  //     if (lane.maxX <= lane.minX) return;
+
+  //     const graphics = this.add.graphics();
+  //     graphics.fillStyle(0xffffff, 0.1);
+  //     graphics.lineStyle(1, 0xffffff, 0.25);
+
+  //     const x = lane.minX - BUTTON_RADIUS;
+  //     const y = laneTop - BUTTON_RADIUS;
+  //     const laneWidth = lane.maxX - lane.minX + BUTTON_RADIUS * 2;
+  //     const laneHeight = laneBottom - laneTop + BUTTON_RADIUS * 2;
+
+  //     graphics.fillRoundedRect(x, y, laneWidth, laneHeight, 14);
+  //     graphics.strokeRoundedRect(x, y, laneWidth, laneHeight, 14);
+  //     graphics.setDepth(-1);
+  //     this.laneShapes.push(graphics);
+  //   });
+  // }
 }
 
 export function createGameConfig(parent: HTMLDivElement): Phaser.Types.Core.GameConfig {
   return {
     type: Phaser.AUTO,
     parent,
-    // backgroundColor: '#1a1a2e',
-    // scale: {
-    //   mode: Phaser.Scale.FIT,
-    //   autoCenter: Phaser.Scale.CENTER_BOTH,
-    //   width: 480,
-    //   height: 853, // 9:16 비율
-    // },
     width: '100%',
     height: '100%',
     physics: {

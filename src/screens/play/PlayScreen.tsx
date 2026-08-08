@@ -2,7 +2,7 @@ import styles from './PlayScreen.module.css';
 import { useEffect, useState } from 'react';
 import { useGameStore } from '../../store/gameStore';
 import GameCanvas from '../../game/GameCanvas';
-import { TUTORIAL_BAND_TARGET_LAYOUT, TUTORIAL_BUTTON_TARGET_LAYOUT } from '../../game/MainScene';
+import { TUTORIAL_BAND_TARGET_LAYOUT, TUTORIAL_BUTTON_TARGET_LAYOUT } from '../../constant/game';
 
 const SHAKE_JUDGMENTS = new Set(['notGood', 'bad']);
 
@@ -61,18 +61,10 @@ export default function PlayScreen() {
           <div className={styles['pause-overlay']}>
             <div className={styles['pause-modal']}>
               <h2 className={styles['pause-title']}>일시정지</h2>
-              <button
-                type="button"
-                className={styles['pause-resume-button']}
-                onClick={resumeGame}
-              >
+              <button type="button" className={styles['pause-resume-button']} onClick={resumeGame}>
                 계속하기
               </button>
-              <button
-                type="button"
-                className={styles['pause-exit-button']}
-                onClick={resetSession}
-              >
+              <button type="button" className={styles['pause-exit-button']} onClick={resetSession}>
                 나가기
               </button>
             </div>
