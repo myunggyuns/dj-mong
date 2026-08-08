@@ -1,15 +1,15 @@
 /* 1. 하이라이트 영역에 빨간색 테두리 부여 */
-:global(.driver-popover-item-highlight) {
+.driver-popover-item-highlight {
   outline: 3px solid #ff4d4d !important;
   outline-offset: 4px;
   border-radius: 12px !important;
 }
 
-:global(.driver-popover-arrow) {
+.driver-popover-arrow {
   display: none !important;
 }
 
-:global(.driver-popover-close-btn) {
+.driver-popover-close-btn {
   color: #ffffff !important; /* 색상을 흰색으로 */
   opacity: 1 !important; /* 투명도 없앰 */
   font-size: 24px !important; /* 크기를 더 크게 */
@@ -17,7 +17,7 @@
 }
 
 /* 2. 흰색 팝오버 상자를 숨기고 깔끔한 빨간 테두리 툴팁으로 변경하고 싶다면 */
-:global(.driver-popover) {
+.driver-popover {
   background-color: #1e1e2d !important; /* 배경을 어둡게 */
   color: #ffffff !important;
   border: 1.5px solid #ff4d4d !important;
@@ -25,13 +25,13 @@
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
 }
 
-:global(.driver-popover-title) {
+.driver-popover-title {
   color: #ff4d4d !important;
   font-weight: bold;
   font-size: 20px;
 }
 
-:global(.driver-popover-description) {
+.driver-popover-description {
   color: #e2e8f0 !important;
   font-size: 16px;
   line-height: 1.7;
@@ -39,24 +39,24 @@
 }
 
 /* 팝오버 화살표 색상 처리 */
-:global(.driver-popover-arrow-side-top) {
+.driver-popover-arrow-side-top {
   border-top-color: #1e1e2d !important;
 }
-:global(.driver-popover-arrow-side-bottom) {
+.driver-popover-arrow-side-bottom {
   border-bottom-color: #1e1e2d !important;
 }
 
-:global(.custom-red-box-popover) {
+.custom-red-box-popover {
   max-width: 380px !important; /* 원하시는 너비로 조정하세요 (기본값은 약 400px) */
   width: 90% !important; /* 모바일 대응을 위해 퍼센트 설정 후 max-width로 제한 */
 }
 
 @media screen and (max-width: 430px) {
-  :global(.driver-popover-title) {
+  .driver-popover-title {
     font-size: 16px;
   }
 
-  :global(.driver-popover-description) {
+  .driver-popover-description {
     font-size: 12px;
   }
 }
