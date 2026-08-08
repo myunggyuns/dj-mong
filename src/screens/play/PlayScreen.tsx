@@ -1,11 +1,14 @@
 import styles from './PlayScreen.module.css';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useGameStore } from '../../store/gameStore';
 import GameCanvas from '../../game/GameCanvas';
 import { TUTORIAL_BAND_TARGET_LAYOUT, TUTORIAL_BUTTON_TARGET_LAYOUT } from '../../game/MainScene';
 
+const SHAKE_JUDGMENTS = new Set(['notGood', 'bad']);
+
 export default function PlayScreen() {
-  const { timeLeft, tick, tutorialStep } = useGameStore();
+  const { timeLeft, tick, tutorialStep, lastJudgment, judgmentSeq } = useGameStore();
+  const [isShaking, setIsShaking] = useState(false);
 
   useEffect(() => {
     if (tutorialStep !== null) return;
@@ -13,13 +16,22 @@ export default function PlayScreen() {
     return () => clearInterval(interval);
   }, [tick, tutorialStep]);
 
+  useEffect(() => {
+    if (judgmentSeq === 0 || !lastJudgment || !SHAKE_JUDGMENTS.has(lastJudgment)) return;
+    setIsShaking(true);
+    const timeout = setTimeout(() => setIsShaking(false), 300);
+    return () => clearTimeout(timeout);
+  }, [judgmentSeq, lastJudgment]);
+
   return (
     <div className={styles.container}>
       <div className={styles['play-spec-box']}>
-        <span>⏱ {Math.ceil(timeLeft)} s</span>
+        <span>
+          ⏱ <span className="hud-number">{Math.ceil(timeLeft)}</span> s
+        </span>
       </div>
 
-      <div className={styles['play-box']}>
+      <div className={`${styles['play-box']} ${isShaking ? styles.shake : ''}`}>
         <GameCanvas />
 
         {/* Phaser draws the band/buttons onto its own <canvas>, invisible to
