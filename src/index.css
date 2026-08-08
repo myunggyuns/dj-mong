@@ -24,7 +24,7 @@ body {
   min-height: 100dvh;
   overflow: hidden;
   font-family: 'Fredoka', system-ui, sans-serif;
-  background: radial-gradient(circle at 50% 0%, #2d1b4e 0%, #1a1a2e 70%);
+  /* background: radial-gradient(circle at 50% 0%, #2d1b4e 0%, #1a1a2e 70%); */
 }
 
 .hud-number {

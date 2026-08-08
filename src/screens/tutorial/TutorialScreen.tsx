@@ -9,7 +9,7 @@ const STEPS = [
     targetElement: '#difficulty-select-area',
     title: 'Step 1. 난이도 선택',
     description:
-      ' 🎵 Normal - [ 3색, 속도 x 1, 버튼 레일 O ] \n 🎧 Tap Master - [ 4색, 속도 x 1.25, 버튼 레일 O ] \n 🔥Tap Legend - [ 5색, 속도 x 1.4, 버튼 레일 X ] \n자신에게 맞는 난이로를 선택하세요.',
+      ' 🎵 Normal - [ 3색, 속도 x 1 ] \n 🎧 Tap Master - [ 4색, 속도 x 1.25 ] \n 🔥Tap Legend - [ 5색, 속도 x 1.4] \n자신에게 맞는 난이로를 선택하세요.',
   },
   {
     targetElement: '#timming-band',
