@@ -15,7 +15,7 @@ export const DIFFICULTIES: Record<Difficulty, DifficultyConfig> = {
   normal: {
     id: 'normal',
     label: 'Normal',
-    description: '3가지 색상으로 게임을 진행합니다.\n버튼이 생성되는 레일이 보입니다.',
+    description: '3가지 색상으로 게임을 진행합니다.',
     colors: ['Red', 'Green', 'Blue'],
     speedMultiplier: 1.0,
     showLanes: true,
@@ -23,7 +23,7 @@ export const DIFFICULTIES: Record<Difficulty, DifficultyConfig> = {
   tapMaster: {
     id: 'tapMaster',
     label: 'Tap Master',
-    description: '4가지 색상으로 게임을 진행합니다.\n버튼이 생성되는 레일이 보입니다.',
+    description: '4가지 색상으로 게임을 진행합니다.',
     colors: ['Red', 'Green', 'Blue', 'Yellow'],
     speedMultiplier: 1.25,
     showLanes: true,
@@ -31,7 +31,7 @@ export const DIFFICULTIES: Record<Difficulty, DifficultyConfig> = {
   tapLegend: {
     id: 'tapLegend',
     label: 'Tap Legend',
-    description: '5가지 색상으로 게임을 진행합니다.\n버튼이 생성되는 레일이 없습니다',
+    description: '5가지 색상으로 게임을 진행합니다.',
     colors: ['Red', 'Green', 'Blue', 'Yellow', 'Purple'],
     speedMultiplier: 1.5,
     showLanes: false,

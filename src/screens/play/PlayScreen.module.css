@@ -21,8 +21,8 @@
 
 .play-box {
   position: relative;
-  flex: 0 0 auto;
-  height: calc(100% - 180px);
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .tutorial-target {
@@ -55,6 +55,6 @@
 
 @media screen and (max-width: 430px) {
   .play-spec-box {
-    padding: 0px 36px;
+    padding: 0px 16px;
   }
 }

@@ -4,6 +4,8 @@ import tapMongGoodReaction from '../assets/tap-mong-good.png';
 import tapMongNotGoodReaction from '../assets/tap-mong-notgood.png';
 import tapMongBadReaction from '../assets/tap-mong-bad.png';
 import tapMongPendingReaction from '../assets/tap-mong-pending.png';
+import tapMongBG from '../assets/tap-mong-bg.png';
+
 import { useGameStore, type Judgment } from '../store/gameStore';
 import { DIFFICULTIES, COLOR_HEX, type ColorId } from '../store/difficulties';
 import {
@@ -30,7 +32,7 @@ const BUTTON_GLOW_PADDING = 12;
 const BUTTON_PRESS_SCALE = 0.88;
 const BUTTON_MIN_DISTANCE = 50;
 const BUTTON_LANE_EDGE_MARGIN = 16;
-const BUTTON_CHARACTER_EXCLUSION_HALF_WIDTH = 110;
+const BUTTON_CHARACTER_EXCLUSION_HALF_WIDTH = 90;
 const BUTTON_VERTICAL_TOP_MARGIN = 100;
 const BUTTON_VERTICAL_BOTTOM_MARGIN = 200;
 const BUTTON_PLACEMENT_MAX_ATTEMPTS = 200;
@@ -49,7 +51,7 @@ const FOOTER_HEIGHT = 56;
 export const TUTORIAL_BAND_TARGET_LAYOUT = { top: 45, height: 60 };
 export const TUTORIAL_BUTTON_TARGET_LAYOUT = {
   top: BAND_HEIGHT + BUTTON_RADIUS + BUTTON_VERTICAL_TOP_MARGIN - 20,
-  bottomOffset: BUTTON_RADIUS + BUTTON_VERTICAL_BOTTOM_MARGIN - 10,
+  bottomOffset: BUTTON_RADIUS + BUTTON_VERTICAL_BOTTOM_MARGIN - 25,
   sideMargin: BUTTON_LANE_EDGE_MARGIN + BUTTON_RADIUS - 20,
 };
 
@@ -137,10 +139,15 @@ export class MainScene extends Phaser.Scene {
       frameWidth: 100,
       frameHeight: 100,
     });
+
+    this.load.image('background', tapMongBG);
   }
 
   create() {
     const { width, height } = this.scale;
+
+    const bg = this.add.image(width / 2, height / 2, 'background');
+    bg.setDisplaySize(width, height);
 
     this.anims.create({
       key: 'perfect_anim',
@@ -213,7 +220,7 @@ export class MainScene extends Phaser.Scene {
     this.pendingEffectSprite.play('pending_anim');
 
     this.createColorBand();
-    this.drawButtonLanes();
+    // this.drawButtonLanes();
     this.spawnButtons();
     this.createHud();
 
@@ -247,7 +254,7 @@ export class MainScene extends Phaser.Scene {
 
     const yPosition = TUTORIAL_BAND_TARGET_LAYOUT.top + TUTORIAL_BAND_TARGET_LAYOUT.height / 2;
     const railHeight = TUTORIAL_BAND_TARGET_LAYOUT.height;
-    this.add.rectangle(width / 2, yPosition, width, railHeight, 0x333333);
+    this.add.rectangle(width / 2, yPosition, width, railHeight, 0x333333, 0.45);
 
     const zone = this.add.graphics();
     zone.fillStyle(0xb89bf0, 0.18);
@@ -574,7 +581,7 @@ export class MainScene extends Phaser.Scene {
   private playScorePop() {
     this.tweens.killTweensOf(this.hudScoreText);
     this.hudScoreText.setScale(1);
-    this.hudScoreText.setColor('#ffd166');
+    this.hudScoreText.setColor('#b89bf0');
     this.tweens.add({
       targets: this.hudScoreText,
       scale: { from: 1, to: 1.25 },
@@ -599,7 +606,7 @@ export class MainScene extends Phaser.Scene {
     });
     this.tweens.add({
       targets: this.hudJudgmentText,
-      alpha: { from: 1, to: 0.1 },
+      alpha: { from: 1, to: 0 },
       delay: 500,
       duration: 500,
       ease: 'Cubic.easeIn',
