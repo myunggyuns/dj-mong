@@ -30,6 +30,9 @@
   font-size: 14px;
   line-height: 1;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-self: center;
 }
 
 .play-box {
